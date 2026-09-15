@@ -16,6 +16,7 @@ def test_notify_calls_notify_send_as_sentinel(monkeypatch):
             "sentinel",
             "-i",
             "network-wired",
+            "--",
             "Internet caiu",
             "Internet caiu às 21:14",
         ]
@@ -33,3 +34,12 @@ def test_a_failed_notification_is_logged_not_raised(monkeypatch, caplog, error):
     monkeypatch.setattr(subprocess, "run", fail)
     DesktopNotifier().notify("t", "b")
     assert "notification failed" in caplog.text
+
+
+def test_the_failure_reason_reaches_the_log(monkeypatch, caplog):
+    def fail(*args, **kwargs):
+        raise subprocess.CalledProcessError(1, "notify-send", stderr="Error parsing option -r")
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    DesktopNotifier().notify("t", "b")
+    assert "Error parsing option -r" in caplog.text
