@@ -1,0 +1,4 @@
+# Copie para ~/.config/sentinel/config.toml e ajuste para a sua rede.
+gateway = "192.168.0.1"
+subnet = "192.168.0.0/24"
+internet_targets = ["1.1.1.1", "8.8.8.8"]
