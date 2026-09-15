@@ -1,0 +1,9 @@
+OUI/MA-L                                                    Organization
+company_id                                                  Organization
+                                                            Address
+
+0C-8E-29   (hex)		Arcadyan Corporation
+0C8E29     (base 16)		Arcadyan Corporation
+				No.8, Sec.2, Guangfu Rd.
+				Hsinchu City  Hsinchu  30071
+				TW
