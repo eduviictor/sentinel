@@ -5,7 +5,7 @@ import sys
 import time
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from datetime import UTC, datetime, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 from ipaddress import IPv4Address
 from pathlib import Path
 
@@ -46,7 +46,7 @@ def device_name(device: Device, gateway: str | None = None) -> str:
     if device.nickname is None and device.ip == gateway:
         return "Roteador"
     mdns = device.mdns_name.removesuffix(".local") if device.mdns_name else None
-    if device.nickname and mdns:
+    if device.nickname and mdns and not mdns.startswith("_"):
         return f"{device.nickname} ({mdns})"
     return device.label
 
@@ -58,8 +58,8 @@ def device_origin(device: Device) -> str:
 
 
 def age(at: datetime, now: datetime) -> str:
-    minutes = int((now - at).total_seconds() // 60)
-    return "agora" if minutes < 1 else f"há {minutes} min"
+    delta = now - at
+    return "agora" if delta < timedelta(minutes=1) else f"há {duration(delta)}"
 
 
 def seen(device: Device, at: datetime) -> str:

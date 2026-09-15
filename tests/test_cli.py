@@ -5,7 +5,7 @@ from sentinel.app.report import Now, Today
 from sentinel.app.stats import Quality
 from sentinel.channels.cli import format_now, format_today, main, round_lock
 from sentinel.config import EXAMPLE
-from sentinel.core.models import Device, Outage, ScannedDevice, Scope
+from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope
 from sentinel.storage.sqlite import SqliteStore
 
 AT = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
@@ -21,6 +21,14 @@ TV = Device(
 PHONE = Device(
     mac="e6:7b:21:a5:94:4a", ip="192.168.0.2", first_seen=AT, last_seen=AT, mdns_name="iPhone.local"
 )
+
+
+def configure(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    (tmp_path / "cfg" / "sentinel").mkdir(parents=True)
+    (tmp_path / "cfg" / "sentinel" / "config.toml").write_text(EXAMPLE)
+    return tmp_path / "data" / "sentinel" / "sentinel.db"
 
 
 def test_now_shows_internet_and_devices_sorted_by_ip():
@@ -93,6 +101,7 @@ def test_the_router_is_called_router_unless_nicknamed():
     assert "_gateway" not in text
     named = replace(report, devices=[replace(router, nickname="Wi-Fi sala")])
     assert "Wi-Fi sala" in format_now(named, tz=UTC, gateway="192.168.0.1")
+    assert "(_gateway)" not in format_now(named, tz=UTC, gateway="192.168.0.1")
 
 
 def test_jitter_without_two_answers_is_a_dash():
@@ -162,11 +171,7 @@ def test_main_without_config_explains_and_fails(tmp_path, monkeypatch, capsys):
 
 
 def test_main_names_a_device(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
-    (tmp_path / "cfg" / "sentinel").mkdir(parents=True)
-    (tmp_path / "cfg" / "sentinel" / "config.toml").write_text(EXAMPLE)
-    with SqliteStore(tmp_path / "data" / "sentinel" / "sentinel.db") as store:
+    with SqliteStore(configure(tmp_path, monkeypatch)) as store:
         store.record_scan(AT, [ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")])
     assert main(["name", "192.168.0.13", "TV sala"]) == 0
     assert 'agora se chama "TV sala"' in capsys.readouterr().out
@@ -180,3 +185,33 @@ def test_only_one_round_holds_the_lock(tmp_path):
         assert second is False
     with round_lock(lock) as again:
         assert again is True
+
+
+def test_a_long_absence_reads_in_hours():
+    away = replace(TV, last_seen=AT - timedelta(hours=72))
+    report = Now(
+        at=AT,
+        internet=Quality(samples=0, loss=0.0),
+        latest_internet_ms=None,
+        latest_gateway_ms=None,
+        open_outage=None,
+        devices=[away],
+    )
+    text = format_now(report, tz=UTC)
+    assert "visto há 72 h" in text
+    assert "varredura há 72 h" in text
+
+
+def test_main_now_and_today_run_end_to_end(tmp_path, monkeypatch, capsys):
+    at = datetime.now(UTC)
+    with SqliteStore(configure(tmp_path, monkeypatch)) as store:
+        store.add_measurement(
+            Measurement(at=at, rtt_ms={"192.168.0.1": 1.0, "1.1.1.1": 20.0, "8.8.8.8": None})
+        )
+        store.record_scan(at, [ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")])
+    assert main(["now"]) == 0
+    out = capsys.readouterr().out
+    assert "Internet: OK — 20 ms até a operadora, 1 ms até o roteador" in out
+    assert "192.168.0.13" in out
+    assert main(["today"]) == 0
+    assert "Hoje até" in capsys.readouterr().out
