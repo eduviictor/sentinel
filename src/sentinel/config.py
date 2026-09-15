@@ -9,6 +9,8 @@ subnet = "192.168.0.0/24"
 internet_targets = ["1.1.1.1", "8.8.8.8"]
 """
 
+LARGEST_SWEEP_PREFIX = 24
+
 
 class ConfigError(Exception):
     pass
@@ -40,13 +42,24 @@ def load(path: Path | None = None) -> Config:
         )
     try:
         raw = tomllib.loads(path.read_text())
-        gateway = str(IPv4Address(raw["gateway"]))
+        gateway = IPv4Address(raw["gateway"])
         subnet = IPv4Network(raw["subnet"])
         targets = tuple(str(IPv4Address(target)) for target in raw["internet_targets"])
-    except (tomllib.TOMLDecodeError, KeyError, ValueError, TypeError) as exc:
+    except KeyError as exc:
+        raise ConfigError(f"configuração inválida em {path}: falta o campo {exc.args[0]}") from exc
+    except (tomllib.TOMLDecodeError, ValueError, TypeError) as exc:
         raise ConfigError(f"configuração inválida em {path}: {exc}") from exc
     if not targets:
         raise ConfigError(f"configuração inválida em {path}: internet_targets está vazio")
+    if subnet.prefixlen < LARGEST_SWEEP_PREFIX:
+        raise ConfigError(
+            f"configuração inválida em {path}: a rede {subnet} é grande demais;"
+            f" o sentinel varre no máximo uma rede /{LARGEST_SWEEP_PREFIX} (254 endereços)"
+        )
+    if gateway not in subnet:
+        raise ConfigError(
+            f"configuração inválida em {path}: o roteador {gateway} está fora da rede {subnet}"
+        )
     return Config(
-        gateway=gateway, subnet=subnet, internet_targets=targets, db_path=default_db_path()
+        gateway=str(gateway), subnet=subnet, internet_targets=targets, db_path=default_db_path()
     )

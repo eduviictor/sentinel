@@ -80,6 +80,8 @@ fronteira real com outro processo ou com arquivo.
   ```
   Se o arquivo não existir, o `sentinel` sai com a mensagem de como criá-lo. No
   MVP nada é descoberto sozinho.
+- Validação ao carregar: rede de no máximo /24 (a varredura pinga cada endereço) e
+  roteador dentro dessa rede; campo ausente é dito pelo nome.
 - Banco: `~/.local/share/sentinel/sentinel.db`.
 - Log: journal do systemd (`journalctl --user -u sentinel`).
 

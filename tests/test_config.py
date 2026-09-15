@@ -47,3 +47,25 @@ def test_paths_follow_xdg(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     assert config_path() == tmp_path / "cfg" / "sentinel" / "config.toml"
     assert default_db_path() == tmp_path / "data" / "sentinel" / "sentinel.db"
+
+
+def test_a_network_larger_than_a_24_is_refused(tmp_path):
+    path = write(
+        tmp_path, 'gateway = "10.0.0.1"\nsubnet = "10.0.0.0/8"\ninternet_targets = ["1.1.1.1"]'
+    )
+    with pytest.raises(ConfigError, match="grande demais"):
+        load(path)
+
+
+def test_a_router_outside_the_network_is_refused(tmp_path):
+    path = write(
+        tmp_path, 'gateway = "10.0.0.1"\nsubnet = "192.168.0.0/24"\ninternet_targets = ["1.1.1.1"]'
+    )
+    with pytest.raises(ConfigError, match="fora da rede"):
+        load(path)
+
+
+def test_a_missing_field_is_named_plainly(tmp_path):
+    path = write(tmp_path, 'gateway = "192.168.0.1"\ninternet_targets = ["1.1.1.1"]')
+    with pytest.raises(ConfigError, match="falta o campo subnet"):
+        load(path)
