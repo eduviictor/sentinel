@@ -1,0 +1,61 @@
+# Rede para quem não é de rede
+
+## Termos
+
+- **IP:** o endereço de um aparelho dentro da rede, como `192.168.0.13`. O roteador
+  distribui e pode mudar com o tempo.
+- **MAC:** a identificação da peça de rede do aparelho, como `0c:8e:29:01:54:ce`.
+  Em tese não muda; é por ele que o `sentinel` reconhece um aparelho.
+- **MAC aleatório:** celulares e notebooks modernos inventam um MAC por rede Wi-Fi
+  para não serem rastreados. Dá para reconhecer: o segundo caractere é `2`, `6`,
+  `A` ou `E`. Esses aparelhos podem trocar de MAC e aparecer como "novos".
+- **Gateway (roteador):** o aparelho que liga a casa à internet. Aqui, `192.168.0.1`.
+- **DHCP:** o serviço do roteador que entrega um IP para cada aparelho que conecta.
+- **Ping:** uma mensagem "você está aí?" enviada a um IP. A resposta diz que o
+  aparelho está ligado e quanto tempo a ida e volta levou.
+- **Latência:** esse tempo de ida e volta, em milissegundos (ms). Até ~30 ms é
+  ótimo; acima de 100 ms chamada de vídeo sofre.
+- **Perda de pacotes:** a parte dos pings que não voltou. 2–3 % já trava chamada.
+- **Jitter:** o quanto a latência varia de uma medição para a outra. Latência
+  estável em 20 ms é melhor que uma que pula entre 10 e 200 ms.
+- **ARP:** como um aparelho descobre o MAC de um IP: pergunta para a rede toda
+  "quem é o 192.168.0.5?" e o dono responde. O Linux guarda as respostas na
+  tabela `/proc/net/arp`.
+- **mDNS:** aparelhos que anunciam o próprio nome na rede ("LGwebOSTV"). O
+  `avahi-resolve` pergunta esse nome.
+- **OUI:** os três primeiros pares do MAC dizem quem fabricou a peça de rede. A
+  lista fica em `/usr/share/ieee-data/oui.txt`.
+
+## Como o sentinel descobre os aparelhos
+
+1. Manda um ping para cada um dos 254 endereços da rede, ao mesmo tempo.
+2. Antes de cada ping, o próprio Linux faz a pergunta ARP. Mesmo o aparelho que
+   recusa ping responde ao ARP, e a resposta vai para a tabela.
+3. O `sentinel` lê a tabela (`/proc/net/arp`), pergunta o nome de cada aparelho
+   por mDNS e procura o fabricante no OUI.
+
+Nada disso precisa de permissão de administrador (ver ADR-0003).
+
+## Como o sentinel mede a internet
+
+A cada 5 s, um ping para o roteador e para dois servidores na internet
+(`1.1.1.1`, da Cloudflare, e `8.8.8.8`, do Google). A internet está no ar se
+qualquer um dos dois responder; a latência da internet é a do mais rápido.
+
+- Só a internet para de responder → problema na **operadora**.
+- O roteador também para → problema **dentro de casa** (roteador ou cabo).
+
+Queda só é declarada depois de 3 medições seguidas sem resposta (15 s), e só
+termina depois de 3 respostas seguidas. Isso evita aviso piscando quando a
+conexão oscila.
+
+## Limites
+
+- O PC está no cabo: o `sentinel` mede a internet, não a qualidade do Wi-Fi.
+- Com o PC desligado ou suspenso, não há medição; o histórico fica com buraco.
+- O próprio PC não aparece na lista de aparelhos: a tabela ARP guarda os vizinhos, não a própria máquina.
+- Um aparelho que acabou de sair pode aparecer em mais uma varredura: o Linux
+  leva alguns segundos para descartar o vizinho que parou de responder, e a
+  varredura lê a tabela antes disso. Na varredura seguinte (5 min) ele some.
+- O nome vem do `avahi-resolve`, que no Ubuntu também consulta o DNS comum. Por
+  isso o roteador volta como `_gateway`; o `sentinel` mostra "Roteador" no lugar.

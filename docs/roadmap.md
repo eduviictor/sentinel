@@ -12,6 +12,11 @@ fora. Nada aqui é compromisso de ordem.
   medir a partir de um aparelho sem fio.
 - **Horário de silêncio para notificações.** No MVP, a notificação sai a qualquer
   hora (silenciosa no Cinnamon).
+- **Jitter por destino.** Hoje o jitter usa, a cada medição, o destino que
+  respondeu mais rápido; se um deles perde uma resposta, a troca de destino
+  aparece como variação. Calcular por destino separa as duas coisas.
+- **Trava contra duas rodadas ao mesmo tempo** (`flock`). Hoje o README pede para
+  não rodar `collect` na mão com o timer ligado.
 
 ## Aparelhos
 
@@ -26,6 +31,11 @@ fora. Nada aqui é compromisso de ordem.
 - **Presença** (iPhone saiu ou chegou), indo para o resumo do dia do Jarvis.
 - **Uso de banda por aparelho e bloqueio.** Só pela API ou SNMP do roteador; sem
   ser o gateway, o tráfego não passa pelo PC.
+- **Mostrar o próprio PC na lista.** A tabela ARP só guarda vizinhos; o PC
+  precisaria ser lido das interfaces de rede.
+- **Presença precisa pelo estado do vizinho.** Ler `ip neigh` (REACHABLE × STALE)
+  em vez de só `/proc/net/arp`, para um aparelho que acabou de sair não aparecer
+  em mais uma varredura.
 
 ## Segurança
 
