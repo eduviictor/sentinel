@@ -130,7 +130,9 @@ Não há tabela de estado. Queda aberta = `outages` sem fim; lista inicial feita
 - `sentinel name <ip|mac> "<apelido>"`.
 - `sentinel collect`: a rodada, chamada pelo timer.
 
-Jitter = média da diferença absoluta entre pings seguidos para o mesmo destino.
+Latência da internet em cada medição = o menor tempo entre os destinos de internet
+que responderam. Jitter = média da diferença absoluta entre essas latências em
+medições seguidas.
 MAC aleatório = segundo dígito hexadecimal do primeiro byte em `2`, `6`, `A` ou `E`.
 
 ## Erros
