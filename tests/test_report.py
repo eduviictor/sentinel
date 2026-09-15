@@ -1,0 +1,80 @@
+from datetime import UTC, datetime, timedelta
+
+import pytest
+from conftest import GATEWAY, INTERNET
+
+from sentinel.app.report import DeviceNotFoundError, name_device, now, today
+from sentinel.core.models import Measurement, ScannedDevice, Scope
+
+NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
+TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")
+PHONE = ScannedDevice(mac="e6:7b:21:a5:94:4a", ip="192.168.0.2")
+
+
+def measure(store, at, internet=20.0, gateway=1.0):
+    store.add_measurement(
+        Measurement(at=at, rtt_ms={GATEWAY: gateway, "1.1.1.1": internet, "8.8.8.8": None})
+    )
+
+
+def test_now_shows_the_latest_answer_and_the_last_five_minutes(store):
+    measure(store, NOW - timedelta(minutes=10), internet=500.0)
+    measure(store, NOW - timedelta(seconds=10), internet=30.0)
+    measure(store, NOW - timedelta(seconds=5), internet=18.0, gateway=2.0)
+    result = now(store, GATEWAY, INTERNET, clock=lambda: NOW)
+    assert result.latest_internet_ms == 18.0
+    assert result.latest_gateway_ms == 2.0
+    assert result.internet.samples == 2
+    assert result.internet.jitter_ms == 12.0
+
+
+def test_now_lists_only_devices_present_in_the_last_scan(store):
+    store.record_scan(NOW - timedelta(minutes=10), [TV, PHONE])
+    store.record_scan(NOW - timedelta(minutes=5), [TV])
+    result = now(store, GATEWAY, INTERNET, clock=lambda: NOW)
+    assert [d.mac for d in result.devices] == [TV.mac]
+
+
+def test_now_reports_an_open_outage(store):
+    store.start_outage(NOW - timedelta(minutes=2), Scope.ISP)
+    assert now(store, GATEWAY, INTERNET, clock=lambda: NOW).open_outage.scope is Scope.ISP
+
+
+def test_today_starts_at_local_midnight(store):
+    measure(store, datetime(2026, 9, 14, 23, 59, tzinfo=UTC), internet=900.0)
+    measure(store, datetime(2026, 9, 15, 8, 0, tzinfo=UTC), internet=20.0)
+    measure(store, datetime(2026, 9, 15, 21, 2, tzinfo=UTC), internet=240.0)
+    result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
+    assert result.since == datetime(2026, 9, 15, tzinfo=UTC)
+    assert result.internet.worst_ms == 240.0
+    assert result.internet.samples == 2
+
+
+def test_today_lists_outages_and_new_devices_of_the_day(store):
+    store.record_scan(datetime(2026, 9, 10, tzinfo=UTC), [TV])
+    store.record_scan(datetime(2026, 9, 15, 18, 40, tzinfo=UTC), [TV, PHONE])
+    store.start_outage(datetime(2026, 9, 15, 14, 10, tzinfo=UTC), Scope.ISP)
+    store.end_outage(datetime(2026, 9, 15, 14, 13, tzinfo=UTC))
+    result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
+    assert [d.mac for d in result.new_devices] == [PHONE.mac]
+    assert len(result.outages) == 1
+
+
+def test_a_device_is_named_by_ip_or_mac(store):
+    store.record_scan(NOW, [TV])
+    assert name_device(store, "192.168.0.13", "TV sala").nickname == "TV sala"
+    assert name_device(store, "0C:8E:29:01:54:CE", "TV da sala").nickname == "TV da sala"
+    assert store.devices()[0].nickname == "TV da sala"
+
+
+def test_an_ip_reused_by_two_devices_names_the_most_recent(store):
+    store.record_scan(
+        NOW - timedelta(days=1), [ScannedDevice(mac="aa:aa:aa:00:00:01", ip="192.168.0.40")]
+    )
+    store.record_scan(NOW, [ScannedDevice(mac="aa:aa:aa:00:00:02", ip="192.168.0.40")])
+    assert name_device(store, "192.168.0.40", "novo").mac == "aa:aa:aa:00:00:02"
+
+
+def test_naming_an_unknown_device_fails_clearly(store):
+    with pytest.raises(DeviceNotFoundError):
+        name_device(store, "192.168.0.99", "fantasma")
