@@ -34,3 +34,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = ["S101"]
+# Adapters run fixed system binaries (ping, avahi-resolve, notify-send) with argument lists, never a shell.
+"src/sentinel/probing/*.py" = ["S603", "S607"]
+"src/sentinel/discovery/*.py" = ["S603", "S607"]
+"src/sentinel/notify/*.py" = ["S603", "S607"]
+"src/sentinel/channels/cli.py" = ["T201"]
