@@ -5,7 +5,7 @@
 
 ## Contexto
 
-São ~26 mil pings por dia (3 destinos, um a cada 5 s, com o PC ligado 24 h), mais
+São ~43 mil pings por dia (3 destinos, 10 medições por minuto, com o PC ligado 24 h), mais
 as varreduras de aparelhos. As perguntas que importam atravessam dias: "a internet
 piora toda noite às 21h?".
 

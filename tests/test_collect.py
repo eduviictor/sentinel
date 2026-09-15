@@ -92,7 +92,10 @@ def test_an_unknown_vendor_is_said_plainly(collector, clock, scanner, notifier):
     scanner.present = [ROUTER, PHONE]
     clock.advance(minutes=5)
     collector.run()
-    assert notifier.sent[-1] == ("Aparelho novo na rede", "fabricante desconhecido, 192.168.0.2")
+    assert notifier.sent[-1] == (
+        "Aparelho novo na rede",
+        "MAC aleatório (celular ou notebook), 192.168.0.2",
+    )
 
 
 def test_devices_are_scanned_every_five_minutes(collector, clock, scanner):
@@ -194,3 +197,12 @@ def test_a_single_device_reads_in_the_singular(collector, scanner, notifier):
     assert notifier.sent == [
         ("Lista inicial criada", "1 aparelho aceito como conhecido. Confira com sentinel now.")
     ]
+
+
+def test_an_unknown_vendor_with_a_fixed_mac_is_said_plainly(collector, clock, scanner, notifier):
+    scanner.present = [ROUTER]
+    collector.run()
+    scanner.present = [ROUTER, ScannedDevice(mac="d8:44:89:00:00:09", ip="192.168.0.30")]
+    clock.advance(minutes=5)
+    collector.run()
+    assert notifier.sent[-1] == ("Aparelho novo na rede", "fabricante desconhecido, 192.168.0.30")

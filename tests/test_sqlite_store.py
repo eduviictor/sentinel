@@ -104,3 +104,11 @@ def test_prune_never_splits_a_minute(store, db_path):
     store.prune(before=base + timedelta(minutes=1, seconds=30))
     row = sqlite3.connect(db_path).execute("SELECT avg_ms FROM probe_minutes").fetchone()
     assert row == (20.0,)
+
+
+def test_prune_without_old_data_changes_nothing(store):
+    store.add_measurement(m(0))
+    store.record_scan(T0, [ScannedDevice(mac="aa:bb:cc:00:00:01", ip="192.168.0.5")])
+    store.prune(before=T0 - timedelta(days=30))
+    assert len(store.measurements_since(T0)) == 1
+    assert store.last_scan_at() == T0

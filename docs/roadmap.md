@@ -15,6 +15,12 @@ fora. Nada aqui é compromisso de ordem.
 - **Jitter por destino.** Hoje o jitter usa, a cada medição, o destino que
   respondeu mais rápido; se um deles perde uma resposta, a troca de destino
   aparece como variação. Calcular por destino separa as duas coisas.
+- **Cobertura sem buraco.** Cada rodada deixa ~15 s por minuto sem medição
+  (ADR-0001). Tirar a varredura de aparelhos da rodada (timer próprio) libera tempo
+  para medir de 5 em 5 s o minuto inteiro.
+- **Queda falsa logo depois de acordar.** Se a rede demorar mais de 10 s para voltar
+  depois de uma suspensão, a primeira rodada pode avisar "Rede de casa caiu".
+  Observar na primeira semana antes de mexer.
 
 ## Aparelhos
 

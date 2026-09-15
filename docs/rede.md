@@ -10,6 +10,9 @@
   para não serem rastreados. Dá para reconhecer: o segundo caractere é `2`, `6`,
   `A` ou `E`. Esses aparelhos podem trocar de MAC e aparecer como "novos".
 - **Gateway (roteador):** o aparelho que liga a casa à internet. Aqui, `192.168.0.1`.
+- **Sub-rede (`/24`):** o bloco de endereços da casa. `192.168.0.0/24` quer dizer
+  "de `192.168.0.1` a `192.168.0.254`": 254 endereços. O `sentinel` só aceita redes
+  desse tamanho ou menores, porque a varredura pinga cada endereço.
 - **DHCP:** o serviço do roteador que entrega um IP para cada aparelho que conecta.
 - **Ping:** uma mensagem "você está aí?" enviada a um IP. A resposta diz que o
   aparelho está ligado e quanto tempo a ida e volta levou.
@@ -28,7 +31,7 @@
 
 ## Como o sentinel descobre os aparelhos
 
-1. Manda um ping para cada um dos 254 endereços da rede, ao mesmo tempo.
+1. Manda um ping para cada um dos 254 endereços da rede, 64 de cada vez.
 2. Antes de cada ping, o próprio Linux faz a pergunta ARP. Mesmo o aparelho que
    recusa ping responde ao ARP, e a resposta vai para a tabela.
 3. O `sentinel` lê a tabela (`/proc/net/arp`), pergunta o nome de cada aparelho

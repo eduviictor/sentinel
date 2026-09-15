@@ -12,8 +12,9 @@ sem buraco e aviso quando a internet cai. Quedas curtas (20 s) também importam.
 
 Um timer do systemd dispara `sentinel collect` a cada minuto. Cada rodada mede por
 ~45 s, com um ping a cada 5 s, e depois varre os aparelhos quando faz 5 min da
-última varredura. A medição cobre o minuto inteiro, então a precisão é a de um
-programa ligado direto.
+última varredura. Entre o fim de uma rodada e o começo da próxima ficam ~15 s sem medição: queda
+de 25 s ou mais é sempre detectada; uma mais curta pode passar se cair nesse
+intervalo (ver roadmap, "Cobertura sem buraco").
 
 Descartado: **programa ligado direto (daemon).** Exige laço contínuo, tratar
 suspensão e se recuperar sozinho de erro. Um travamento pendurado (o processo não
@@ -30,4 +31,4 @@ morre, só para) não é percebido pelo systemd e pode parar a coleta por horas.
 - Duas rodadas nunca rodam juntas: uma trava de arquivo (`collect.lock`, ao lado do
   banco) faz a segunda sair na hora.
 - Depois de uma suspensão, a rodada em curso termina sem medir nem varrer: a primeira
-  medição ao acordar pegaria o Wi-Fi ainda reconectando.
+  medição ao acordar pegaria o rede ainda reconectando.

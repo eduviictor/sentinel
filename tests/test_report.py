@@ -83,3 +83,10 @@ def test_naming_an_unknown_device_fails_clearly(store):
 def test_a_dashed_mac_is_accepted(store):
     store.record_scan(NOW, [TV])
     assert name_device(store, "0C-8E-29-01-54-CE", "TV").mac == TV.mac
+
+
+def test_the_initial_list_is_not_new_on_day_one(store):
+    store.record_scan(datetime(2026, 9, 15, 8, 0, tzinfo=UTC), [TV])
+    store.record_scan(datetime(2026, 9, 15, 18, 40, tzinfo=UTC), [TV, PHONE])
+    result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
+    assert [d.mac for d in result.new_devices] == [PHONE.mac]

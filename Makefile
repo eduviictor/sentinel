@@ -24,6 +24,8 @@ test:
 	uv run pytest -q
 
 install-timer:
+	@test -f ~/.config/sentinel/config.toml || { echo "crie ~/.config/sentinel/config.toml antes (veja o README)" >&2; exit 1; }
+	@test -x .venv/bin/sentinel || { echo "rode make install antes" >&2; exit 1; }
 	mkdir -p ~/.config/systemd/user
 	cp infra/systemd/sentinel.service infra/systemd/sentinel.timer ~/.config/systemd/user/
 	systemctl --user daemon-reload
@@ -32,5 +34,7 @@ install-timer:
 
 uninstall-timer:
 	-systemctl --user disable --now sentinel.timer
+	-systemctl --user stop sentinel.service
+	-systemctl --user reset-failed sentinel.service
 	rm -f ~/.config/systemd/user/sentinel.service ~/.config/systemd/user/sentinel.timer
 	systemctl --user daemon-reload

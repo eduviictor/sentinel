@@ -62,10 +62,6 @@ def age(at: datetime, now: datetime) -> str:
     return "agora" if delta < timedelta(minutes=1) else f"há {duration(delta)}"
 
 
-def seen(device: Device, at: datetime) -> str:
-    return f"visto {age(device.last_seen, at)}"
-
-
 def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None) -> str:
     lines = []
     if report.open_outage:
@@ -94,13 +90,12 @@ def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None
     )
     for device in sorted(report.devices, key=lambda d: IPv4Address(d.ip)):
         lines.append(
-            f"  {device.ip:<15} {device_name(device, gateway):<32} {device_origin(device):<24}"
-            f" {seen(device, report.at)}"
+            f"  {device.ip:<15} {device_name(device, gateway):<32} {device_origin(device)}"
         )
     return "\n".join(lines)
 
 
-def format_today(report: Today, tz: tzinfo | None = None) -> str:
+def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = None) -> str:
     q = report.internet
     lines = [f"Hoje até {hhmm(report.at, tz)}"]
     if q.samples == 0:
@@ -125,7 +120,10 @@ def format_today(report: Today, tz: tzinfo | None = None) -> str:
     if not report.new_devices:
         lines.append("Aparelhos novos: nenhum")
     else:
-        parts = [f"{d.label}, {d.ip} às {hhmm(d.first_seen, tz)}" for d in report.new_devices]
+        parts = [
+            f"{device_name(d, gateway)}, {d.ip} às {hhmm(d.first_seen, tz)}"
+            for d in report.new_devices
+        ]
         lines.append(f"Aparelhos novos: {len(parts)} — " + "; ".join(parts))
     return "\n".join(lines)
 
@@ -155,7 +153,9 @@ def run_now(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
 
 
 def run_today(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
-    print(format_today(today(store, config.internet_targets, clock=utc_now)))
+    print(
+        format_today(today(store, config.internet_targets, clock=utc_now), gateway=config.gateway)
+    )
     return 0
 
 

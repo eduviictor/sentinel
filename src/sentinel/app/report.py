@@ -58,12 +58,14 @@ def today(
 ) -> Today:
     at = clock()
     midnight = at.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    devices = store.devices()
+    initial = min((d.first_seen for d in devices), default=None)
     return Today(
         at=at,
         since=midnight,
         internet=quality(store.measurements_since(midnight), internet_targets),
         outages=store.outages_since(midnight),
-        new_devices=[d for d in store.devices() if d.first_seen >= midnight],
+        new_devices=[d for d in devices if d.first_seen >= midnight and d.first_seen != initial],
     )
 
 

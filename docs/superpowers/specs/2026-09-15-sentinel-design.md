@@ -22,7 +22,7 @@ em `docs/roadmap.md`, com o motivo.
 | Escopo | Aparelhos na rede + qualidade da internet, ambos no mínimo | Só uma das partes: o histórico só vale depois de dias acumulando, e as duas partes usam a mesma base. |
 | Como ver | Comando no terminal + notificação na área de trabalho | Página web: muito mais trabalho; o lab Grafana pode ler os mesmos dados depois. |
 | Lista de conhecidos | A primeira varredura vira a lista inicial | Tudo desconhecido até nomear: seis avisos de uma vez no primeiro dia. |
-| Execução | Timer do systemd a cada minuto; cada rodada mede por ~50 s | Programa ligado direto (daemon): mais código, e um travamento pendurado não é percebido. A rodada de 50 s cobre o minuto inteiro, então a precisão é a mesma. |
+| Execução | Timer do systemd a cada minuto; cada rodada mede por ~45 s | Programa ligado direto (daemon): mais código, e um travamento pendurado não é percebido. A rodada deixa ~15 s por minuto sem medição (ADR-0001). |
 | Armazenamento | SQLite num arquivo só | Arquivos JSON Lines por dia: consulta entre dias fica lenta e manual. |
 | Descoberta | Sem permissão de administrador: ping em toda a rede + tabela ARP + avahi + OUI | `scapy` com `CAP_NET_RAW`: a permissão valeria para qualquer código no Python do venv, por pouco ganho. |
 | Idioma | Subcomandos em inglês, mensagens em português | — |
@@ -87,7 +87,7 @@ fronteira real com outro processo ou com arquivo.
 
 ## A rodada (`sentinel collect`)
 
-1. **Medição, ~50 s.** A cada 5 s, um ping em paralelo para o roteador e para
+1. **Medição, ~45 s.** A cada 5 s, um ping em paralelo para o roteador e para
    cada destino de internet. Cada resultado vira uma linha em `probes`.
    A internet responde se **qualquer** destino de internet responder.
 2. **Quedas, com confirmação.**

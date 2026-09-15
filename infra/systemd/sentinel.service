@@ -1,6 +1,5 @@
 [Unit]
 Description=sentinel: mede a internet e vê quem está na rede
-After=network-online.target
 
 [Service]
 Type=oneshot

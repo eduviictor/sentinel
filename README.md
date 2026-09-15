@@ -8,13 +8,17 @@ O que ainda não foi feito está em [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Instalar
 
-Precisa de `uv`, `make`, `ping`, `notify-send` e, para nomes de aparelhos, `avahi-resolve`.
+Precisa de `uv`, `make`, `ping`, `notify-send` e, para nomes de aparelhos, `avahi-resolve`; para o fabricante, o pacote `ieee-data`.
 
     make install
     mkdir -p ~/.config/sentinel
     cp config.example.toml ~/.config/sentinel/config.toml
 
 Ajuste `gateway` e `subnet` no arquivo para a sua rede.
+
+Para achar os seus: `ip route | grep default` mostra o roteador depois de `via`
+(ex.: `192.168.0.1`); a rede é esse endereço com o último número trocado por `0/24`
+(ex.: `192.168.0.0/24`).
 
 ## Rodar sozinho
 
@@ -38,5 +42,5 @@ Com o timer desligado, rode uma rodada de verdade (leva ~50 s) e confira:
 
     uv run sentinel collect && uv run sentinel now
 
-Com o timer ligado, uma rodada manual que coincida com a do timer sai na hora,
-avisando que já há outra rodada em andamento.
+Com o timer ligado, duas rodadas nunca rodam juntas: a que começar por último sai
+na hora, avisando que já há outra em andamento.

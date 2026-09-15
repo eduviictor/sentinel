@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, tzinfo
 
 from sentinel.app.outages import CONFIRMATIONS, OutageEnded, OutageStarted, next_event
 from sentinel.app.text import duration, hhmm
-from sentinel.core.models import Measurement, Scope
+from sentinel.core.models import Measurement, ScannedDevice, Scope, is_random_mac
 from sentinel.core.ports import Notifier, Prober, Scanner, Store
 
 log = logging.getLogger(__name__)
@@ -16,6 +16,14 @@ INTERVAL = timedelta(seconds=5)
 SCAN_EVERY = timedelta(minutes=4, seconds=30)
 RETENTION = timedelta(days=30)
 ROUND_BUDGET_S = 55
+
+
+def describe(device: ScannedDevice) -> str:
+    if device.vendor:
+        return device.vendor
+    if is_random_mac(device.mac):
+        return "MAC aleatório (celular ou notebook)"
+    return "fabricante desconhecido"
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +116,4 @@ class Collector:
             return
         for device in found:
             if device.mac not in known:
-                self.notifier.notify(
-                    "Aparelho novo na rede",
-                    f"{device.vendor or 'fabricante desconhecido'}, {device.ip}",
-                )
+                self.notifier.notify("Aparelho novo na rede", f"{describe(device)}, {device.ip}")

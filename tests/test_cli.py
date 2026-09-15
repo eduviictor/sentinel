@@ -49,7 +49,6 @@ def test_now_shows_internet_and_devices_sorted_by_ip():
     assert text.index("192.168.0.2") < text.index("192.168.0.13")
     assert "MAC aleatório" in text
     assert "TV sala (LGwebOSTV)" in text
-    assert "visto há 3 min" in text
 
 
 def test_now_says_when_the_internet_is_down():
@@ -198,7 +197,6 @@ def test_a_long_absence_reads_in_hours():
         devices=[away],
     )
     text = format_now(report, tz=UTC)
-    assert "visto há 72 h" in text
     assert "varredura há 72 h" in text
 
 
@@ -215,3 +213,25 @@ def test_main_now_and_today_run_end_to_end(tmp_path, monkeypatch, capsys):
     assert "192.168.0.13" in out
     assert main(["today"]) == 0
     assert "Hoje até" in capsys.readouterr().out
+
+
+def test_today_calls_the_router_router():
+    router = Device(
+        mac="d8:44:89:83:53:f0", ip="192.168.0.1", first_seen=AT, last_seen=AT, mdns_name="_gateway"
+    )
+    report = Today(
+        at=AT,
+        since=AT.replace(hour=0, minute=0),
+        internet=Quality(samples=0, loss=0.0),
+        outages=[],
+        new_devices=[router],
+    )
+    text = format_today(report, tz=UTC, gateway="192.168.0.1")
+    assert "Aparelhos novos: 1 — Roteador, 192.168.0.1 às 21:30" in text
+
+
+def test_collect_steps_aside_when_another_round_holds_the_lock(tmp_path, monkeypatch, capsys):
+    db = configure(tmp_path, monkeypatch)
+    with round_lock(db.with_name("collect.lock")):
+        assert main(["collect"]) == 0
+    assert "outra rodada já está em andamento" in capsys.readouterr().err
