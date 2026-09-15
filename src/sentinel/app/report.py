@@ -68,7 +68,7 @@ def today(
 
 
 def name_device(store: Store, ref: str, nickname: str) -> Device:
-    wanted = ref.strip().lower()
+    wanted = ref.strip().lower().replace("-", ":")
     for device in sorted(store.devices(), key=lambda d: d.last_seen, reverse=True):
         if wanted in (device.mac, device.ip):
             store.set_nickname(device.mac, nickname)

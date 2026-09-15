@@ -78,3 +78,8 @@ def test_an_ip_reused_by_two_devices_names_the_most_recent(store):
 def test_naming_an_unknown_device_fails_clearly(store):
     with pytest.raises(DeviceNotFoundError):
         name_device(store, "192.168.0.99", "fantasma")
+
+
+def test_a_dashed_mac_is_accepted(store):
+    store.record_scan(NOW, [TV])
+    assert name_device(store, "0C-8E-29-01-54-CE", "TV").mac == TV.mac

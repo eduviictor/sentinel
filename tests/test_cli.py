@@ -37,7 +37,7 @@ def test_now_shows_internet_and_devices_sorted_by_ip():
     )
     assert "Internet: OK — 18 ms até a operadora, 1 ms até o roteador" in text
     assert "Últimos 5 min: perda 0,0%, jitter 2 ms" in text
-    assert "Aparelhos na rede (2):" in text
+    assert "Aparelhos na rede (2), varredura agora:" in text
     assert text.index("192.168.0.2") < text.index("192.168.0.13")
     assert "MAC aleatório" in text
     assert "TV sala (LGwebOSTV)" in text
@@ -138,6 +138,21 @@ def test_today_summarises_the_day():
     assert "Latência média 19 ms · pior momento 21:02 (240 ms) · perda 0,3% · jitter 3 ms" in text
     assert "Quedas: 1 — 14:10 a 14:13 (3 min, operadora)" in text
     assert "Aparelhos novos: 1 — iPhone, 192.168.0.2 às 21:30" in text
+
+
+def test_now_says_how_old_the_last_scan_is():
+    text = format_now(
+        Now(
+            at=AT,
+            internet=Quality(samples=0, loss=0.0),
+            latest_internet_ms=None,
+            latest_gateway_ms=None,
+            open_outage=None,
+            devices=[TV],
+        ),
+        tz=UTC,
+    )
+    assert "Aparelhos na rede (1), varredura há 3 min:" in text
 
 
 def test_main_without_config_explains_and_fails(tmp_path, monkeypatch, capsys):

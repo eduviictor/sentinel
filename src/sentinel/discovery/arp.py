@@ -66,6 +66,7 @@ class ArpScanner:
         self._workers = workers
 
     def scan(self) -> list[ScannedDevice]:
+        # The sweep only fills the kernel ARP table; the ping answers themselves don't matter.
         self._prober.ping_many([str(host) for host in self._subnet.hosts()])
         neighbours = parse_arp_table(self._arp_table.read_text(), self._subnet)
         vendors = load_vendors(self._oui_file)

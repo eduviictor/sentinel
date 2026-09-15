@@ -42,9 +42,13 @@ def device_origin(device: Device) -> str:
     return device.vendor or device.mac[:8].upper()
 
 
+def age(at: datetime, now: datetime) -> str:
+    minutes = int((now - at).total_seconds() // 60)
+    return "agora" if minutes < 1 else f"há {minutes} min"
+
+
 def seen(device: Device, at: datetime) -> str:
-    minutes = int((at - device.last_seen).total_seconds() // 60)
-    return "visto agora" if minutes < 1 else f"visto há {minutes} min"
+    return f"visto {age(device.last_seen, at)}"
 
 
 def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None) -> str:
@@ -69,7 +73,10 @@ def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None
     if not report.devices:
         lines.append("Aparelhos: nenhuma varredura ainda")
         return "\n".join(lines)
-    lines.append(f"Aparelhos na rede ({len(report.devices)}):")
+    last_scan = max(device.last_seen for device in report.devices)
+    lines.append(
+        f"Aparelhos na rede ({len(report.devices)}), varredura {age(last_scan, report.at)}:"
+    )
     for device in sorted(report.devices, key=lambda d: IPv4Address(d.ip)):
         lines.append(
             f"  {device.ip:<15} {device_name(device, gateway):<32} {device_origin(device):<24}"
