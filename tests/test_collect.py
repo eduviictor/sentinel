@@ -119,11 +119,78 @@ def test_pings_older_than_thirty_days_leave_the_raw_table(collector, store):
     assert store.measurements_since(old)[0].at == START
 
 
-def test_a_clock_jump_ends_the_round_instead_of_bursting(collector, clock, store):
+def test_a_clock_jump_ends_the_round_without_measuring_or_scanning(
+    collector, clock, scanner, store
+):
     def sleep_through_a_suspend(seconds):
         clock.sleep(seconds)
         if clock.now == START + timedelta(seconds=10):
             clock.advance(hours=9)
 
+    scanner.present = [ROUTER]
     replace(collector, sleep=sleep_through_a_suspend).run()
-    assert len(store.measurements_since(START)) == 3
+    assert len(store.measurements_since(START)) == 2
+    assert scanner.calls == 0
+
+
+def test_a_clock_going_back_ends_the_round_instead_of_sleeping_long(collector, clock, store):
+    naps = []
+
+    def sleep_and_step_back(seconds):
+        naps.append(seconds)
+        clock.sleep(seconds)
+        if clock.now == START + timedelta(seconds=5):
+            clock.advance(hours=-1)
+
+    replace(collector, sleep=sleep_and_step_back).run()
+    assert max(naps) <= 5
+    assert len(store.measurements_since(START - timedelta(hours=2))) == 2
+
+
+def test_a_slow_round_is_logged_as_a_warning(collector, clock, scanner, caplog):
+    def slow_scan():
+        clock.advance(seconds=20)
+        return [ROUTER]
+
+    scanner.scan = slow_scan
+    collector.run()
+    assert "round took 65.0 s" in caplog.text
+
+
+def test_the_scan_keeps_its_cadence_when_rounds_start_early(collector, clock, scanner):
+    scanner.present = [ROUTER]
+    collector.run()
+    for _ in range(4):
+        clock.advance(seconds=13)
+        collector.run()
+    assert scanner.calls == 1
+    clock.advance(seconds=13)
+    collector.run()
+    assert scanner.calls == 2
+
+
+def test_a_mac_seen_on_two_ips_counts_once(collector, scanner, notifier, store):
+    twin = ScannedDevice(mac=TV.mac, ip="192.168.0.21", vendor=TV.vendor)
+    scanner.present = [ROUTER, TV, twin]
+    collector.run()
+    assert len(store.devices()) == 2
+    assert notifier.sent == [
+        ("Lista inicial criada", "2 aparelhos aceitos como conhecidos. Confira com sentinel now.")
+    ]
+
+
+def test_a_new_mac_on_two_ips_is_announced_once(collector, clock, scanner, notifier):
+    scanner.present = [ROUTER]
+    collector.run()
+    scanner.present = [ROUTER, TV, ScannedDevice(mac=TV.mac, ip="192.168.0.21")]
+    clock.advance(minutes=5)
+    collector.run()
+    assert notifier.titles().count("Aparelho novo na rede") == 1
+
+
+def test_a_single_device_reads_in_the_singular(collector, scanner, notifier):
+    scanner.present = [ROUTER]
+    collector.run()
+    assert notifier.sent == [
+        ("Lista inicial criada", "1 aparelho aceito como conhecido. Confira com sentinel now.")
+    ]

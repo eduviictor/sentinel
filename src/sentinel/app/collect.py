@@ -15,6 +15,7 @@ INTERVAL = timedelta(seconds=5)
 # Rounds start a minute apart with some jitter; 4m30s keeps the scan on a five-minute cadence.
 SCAN_EVERY = timedelta(minutes=4, seconds=30)
 RETENTION = timedelta(days=30)
+ROUND_BUDGET_S = 55
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,16 +33,25 @@ class Collector:
     def run(self) -> None:
         start = self.clock()
         for tick in range(TICKS):
-            wait = (start + tick * INTERVAL - self.clock()).total_seconds()
-            if wait < -INTERVAL.total_seconds():
-                log.info("clock jumped %.0f s, ending the round early", -wait)
-                break
+            due = start + tick * INTERVAL
+            wait = (due - self.clock()).total_seconds()
+            if wait > INTERVAL.total_seconds():
+                log.info("clock went back %.0f s, ending the round early", wait)
+                return
             if wait > 0:
                 self.sleep(wait)
+            if self.clock() - due > INTERVAL:
+                log.info("clock jumped, ending the round early")
+                return
             self._measure()
         if self._scan_due():
             self._scan()
         self.store.prune(before=self.clock() - RETENTION)
+        elapsed = (self.clock() - start).total_seconds()
+        if elapsed > ROUND_BUDGET_S:
+            log.warning("round took %.1f s, the next minute may be skipped", elapsed)
+        else:
+            log.info("round took %.1f s", elapsed)
 
     def _measure(self) -> None:
         targets = [self.gateway, *self.internet_targets]
@@ -82,17 +92,19 @@ class Collector:
 
     def _scan(self) -> None:
         at = self.clock()
-        found = self.scanner.scan()
+        found = list({device.mac: device for device in self.scanner.scan()}.values())
         if not found:
             log.info("scan found no devices")
             return
         known = {device.mac for device in self.store.devices()}
         self.store.record_scan(at, found)
         if not known:
-            self.notifier.notify(
-                "Lista inicial criada",
-                f"{len(found)} aparelhos aceitos como conhecidos. Confira com sentinel now.",
+            accepted = (
+                "1 aparelho aceito como conhecido"
+                if len(found) == 1
+                else f"{len(found)} aparelhos aceitos como conhecidos"
             )
+            self.notifier.notify("Lista inicial criada", f"{accepted}. Confira com sentinel now.")
             return
         for device in found:
             if device.mac not in known:

@@ -15,8 +15,6 @@ fora. Nada aqui é compromisso de ordem.
 - **Jitter por destino.** Hoje o jitter usa, a cada medição, o destino que
   respondeu mais rápido; se um deles perde uma resposta, a troca de destino
   aparece como variação. Calcular por destino separa as duas coisas.
-- **Trava contra duas rodadas ao mesmo tempo** (`flock`). Hoje o README pede para
-  não rodar `collect` na mão com o timer ligado.
 
 ## Aparelhos
 

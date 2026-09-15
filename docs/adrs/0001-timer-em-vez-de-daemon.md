@@ -25,3 +25,9 @@ morre, só para) não é percebido pelo systemd e pode parar a coleta por horas.
 - O estado entre rodadas (queda aberta, últimas medições) mora no SQLite, não em memória.
 - Se uma rodada passar de um minuto, o systemd não inicia outra por cima.
 - Trocar por daemon depois só muda quem chama o `Collector`; a lógica fica igual.
+- Uma rodada que passa de 60 s faz o systemd pular o minuto seguinte, e a medição
+  daquele minuto se perde. O log registra a duração de cada rodada e avisa acima de 55 s.
+- Duas rodadas nunca rodam juntas: uma trava de arquivo (`collect.lock`, ao lado do
+  banco) faz a segunda sair na hora.
+- Depois de uma suspensão, a rodada em curso termina sem medir nem varrer: a primeira
+  medição ao acordar pegaria o Wi-Fi ainda reconectando.

@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 from sentinel.app.report import Now, Today
 from sentinel.app.stats import Quality
-from sentinel.channels.cli import format_now, format_today, main
+from sentinel.channels.cli import format_now, format_today, main, round_lock
 from sentinel.config import EXAMPLE
 from sentinel.core.models import Device, Outage, ScannedDevice, Scope
 from sentinel.storage.sqlite import SqliteStore
@@ -171,3 +171,12 @@ def test_main_names_a_device(tmp_path, monkeypatch, capsys):
     assert main(["name", "192.168.0.13", "TV sala"]) == 0
     assert 'agora se chama "TV sala"' in capsys.readouterr().out
     assert main(["name", "192.168.0.99", "x"]) == 1
+
+
+def test_only_one_round_holds_the_lock(tmp_path):
+    lock = tmp_path / "collect.lock"
+    with round_lock(lock) as first, round_lock(lock) as second:
+        assert first is True
+        assert second is False
+    with round_lock(lock) as again:
+        assert again is True

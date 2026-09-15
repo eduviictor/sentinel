@@ -1,10 +1,13 @@
 import argparse
+import fcntl
 import logging
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from datetime import UTC, datetime, tzinfo
 from ipaddress import IPv4Address
+from pathlib import Path
 
 from sentinel.app.collect import Collector
 from sentinel.app.report import DeviceNotFoundError, Now, Today, name_device, now, today
@@ -21,6 +24,18 @@ SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+@contextmanager
+def round_lock(path: Path) -> Iterator[bool]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        yield True
 
 
 def jitter(value: float | None) -> str:
@@ -116,16 +131,20 @@ def format_today(report: Today, tz: tzinfo | None = None) -> str:
 
 
 def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
-    Collector(
-        gateway=config.gateway,
-        internet_targets=config.internet_targets,
-        prober=PingProber(),
-        scanner=ArpScanner(config.subnet, PingProber(timeout_s=1, workers=64)),
-        notifier=DesktopNotifier(),
-        store=store,
-        clock=utc_now,
-        sleep=time.sleep,
-    ).run()
+    with round_lock(config.db_path.with_name("collect.lock")) as acquired:
+        if not acquired:
+            print("outra rodada já está em andamento; esta foi ignorada", file=sys.stderr)
+            return 0
+        Collector(
+            gateway=config.gateway,
+            internet_targets=config.internet_targets,
+            prober=PingProber(),
+            scanner=ArpScanner(config.subnet, PingProber(timeout_s=1, workers=64)),
+            notifier=DesktopNotifier(),
+            store=store,
+            clock=utc_now,
+            sleep=time.sleep,
+        ).run()
     return 0
 
 

@@ -59,3 +59,5 @@ conexão oscila.
   varredura lê a tabela antes disso. Na varredura seguinte (5 min) ele some.
 - O nome vem do `avahi-resolve`, que no Ubuntu também consulta o DNS comum. Por
   isso o roteador volta como `_gateway`; o `sentinel` mostra "Roteador" no lugar.
+- Na primeira varredura, um aparelho dormindo (celular com a tela apagada) pode não
+  responder. Ele entra depois como "aparelho novo", uma vez só.

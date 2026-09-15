@@ -38,6 +38,5 @@ Com o timer desligado, rode uma rodada de verdade (leva ~50 s) e confira:
 
     uv run sentinel collect && uv run sentinel now
 
-Com o timer ligado, não rode `collect` na mão: duas rodadas ao mesmo tempo
-duplicam medições e podem avisar a mesma queda duas vezes. Use
-`systemctl --user start sentinel.service`, que espera a rodada atual terminar.
+Com o timer ligado, uma rodada manual que coincida com a do timer sai na hora,
+avisando que já há outra rodada em andamento.
