@@ -1,0 +1,9 @@
+[Unit]
+Description=Roda o sentinel a cada minuto
+
+[Timer]
+OnCalendar=minutely
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

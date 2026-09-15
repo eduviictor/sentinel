@@ -1,4 +1,4 @@
-.PHONY: install lint check test
+.PHONY: install lint check test install-timer uninstall-timer
 
 install:
 	uv sync
@@ -22,3 +22,15 @@ check:
 
 test:
 	uv run pytest -q
+
+install-timer:
+	mkdir -p ~/.config/systemd/user
+	cp infra/systemd/sentinel.service infra/systemd/sentinel.timer ~/.config/systemd/user/
+	systemctl --user daemon-reload
+	systemctl --user enable --now sentinel.timer
+	systemctl --user list-timers sentinel.timer --no-pager
+
+uninstall-timer:
+	-systemctl --user disable --now sentinel.timer
+	rm -f ~/.config/systemd/user/sentinel.service ~/.config/systemd/user/sentinel.timer
+	systemctl --user daemon-reload
