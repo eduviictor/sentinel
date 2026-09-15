@@ -1,4 +1,4 @@
-# skeleton — contexto para o Claude Code
+# sentinel — contexto para o Claude Code
 
 O que é: _a preencher na primeira sessão, em uma frase._
 

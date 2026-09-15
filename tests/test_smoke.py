@@ -1,5 +1,5 @@
-import skeleton
+import sentinel
 
 
 def test_package_imports():
-    assert skeleton.__name__ == "skeleton"
+    assert sentinel.__name__ == "sentinel"
