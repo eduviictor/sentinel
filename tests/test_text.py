@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -21,3 +21,8 @@ def test_ms_and_pct():
     assert ms(18.4) == "18 ms"
     assert ms(None) == "sem resposta"
     assert pct(0.003) == "0,3%"
+
+
+def test_hhmm_converts_to_the_given_timezone():
+    brasilia = timezone(timedelta(hours=-3))
+    assert hhmm(datetime(2026, 9, 15, 21, 14, tzinfo=UTC), brasilia) == "18:14"

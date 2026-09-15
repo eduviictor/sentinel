@@ -40,3 +40,10 @@ def test_all_silent_is_total_loss():
     result = quality([m(0, None), m(1, None)], TARGETS)
     assert result.loss == 1.0
     assert result.jitter_ms is None
+
+
+def test_a_single_answer_has_no_jitter():
+    result = quality([m(0, 15.0)], TARGETS)
+    assert result.avg_ms == 15.0
+    assert result.worst_at == T0
+    assert result.jitter_ms is None

@@ -99,6 +99,8 @@ fronteira real com outro processo ou com arquivo.
      dessas três respostas e notifica "Internet voltou às 21:17 — ficou fora 3 min".
    - As "3 seguidas" saem dos últimos registros em `probes`, então a regra
      atravessa a fronteira entre rodadas.
+   - A janela das 3 medições só vale se for contínua: entre uma e outra, de 2 s a
+     30 s. Janela que atravessa uma suspensão ou rajada logo depois de acordar não conta.
 3. **Aparelhos, a cada 5 min** (se a última varredura em `sightings` tiver 5 min ou mais).
    - `devices` vazia: todos entram como conhecidos, e uma notificação diz
      "Lista inicial: N aparelhos aceitos. Confira com `sentinel now`".

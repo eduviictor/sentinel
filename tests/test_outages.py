@@ -58,3 +58,35 @@ def test_three_answers_close_the_outage_at_the_first_of_them():
 
 def test_two_answers_do_not_close_the_outage():
     assert event([down(0), tick(1), tick(2)], OPEN) is None
+
+
+def shifted(measurement, **delta):
+    return Measurement(at=measurement.at + timedelta(**delta), rtt_ms=measurement.rtt_ms)
+
+
+def test_a_window_across_a_suspend_is_not_an_outage():
+    before = down(0, gateway=False)
+    after = [shifted(down(n, gateway=False), hours=9) for n in (1, 2)]
+    assert event([before, *after]) is None
+
+
+def test_measurements_bunched_after_resume_are_not_an_outage():
+    assert (
+        event([down(0), shifted(down(0), milliseconds=3), shifted(down(0), milliseconds=6)]) is None
+    )
+
+
+def test_an_outage_open_before_suspend_closes_after_resume_counting_the_gap():
+    window = [down(0), *(shifted(tick(n), hours=9) for n in (1, 2, 3))]
+    assert event(window, OPEN) == OutageEnded(at=T0 + timedelta(hours=9, seconds=5))
+
+
+def test_router_silent_in_only_part_of_the_window_is_still_isp():
+    started = event([down(0), down(1, gateway=False), down(2, gateway=False)])
+    assert started == OutageStarted(at=T0, scope=Scope.ISP)
+
+
+def test_flapping_opens_only_after_three_in_a_row():
+    sequence = [down(0), down(1), tick(2), down(3), down(4), down(5)]
+    assert event(sequence[:5]) is None
+    assert event(sequence) == OutageStarted(at=T0 + timedelta(seconds=15), scope=Scope.ISP)
