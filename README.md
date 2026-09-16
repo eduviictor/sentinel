@@ -142,6 +142,10 @@ make install-timer
 Pronto. Em cerca de 1 minuto chega a notificação "Lista inicial criada". O primeiro
 teste de velocidade roda no próximo horário (00:17, 03:17, 06:17…).
 
+Para ver o nome dos fabricantes com a lista atualizada (a do sistema costuma ser
+antiga), rode uma vez `sentinel update-vendors`. Para conferir se tudo está
+rodando: `sentinel status`.
+
 ---
 
 ## Comandos
@@ -149,14 +153,19 @@ teste de velocidade roda no próximo horário (00:17, 03:17, 06:17…).
 | Comando | O que faz |
 |---|---|
 | `sentinel` ou `sentinel now` | Como está a rede agora |
-| `sentinel today` | Resumo do dia |
+| `sentinel today` | Resumo de hoje (`--ontem` ou `--data 14/09` para outro dia) |
 | `sentinel history` | A internet por hora do dia nos últimos 7 dias (`--days 1-30`) |
 | `sentinel devices` | Todos os aparelhos já vistos, com MAC, inclusive os que saíram |
+| `sentinel status` | O sentinel está funcionando? Timers, última medição, próximo speedtest |
 | `sentinel name 192.168.0.13 "TV sala"` | Dá apelido a um aparelho (aceita IP ou MAC) |
 | `sentinel same 6e:ae:… ce:f3:…` | Junta os dois MACs de um celular que trocou de MAC |
+| `sentinel update-vendors` | Baixa a lista de fabricantes atualizada do IEEE |
 | `sentinel speedtest` | Mede download e upload agora |
 | `sentinel collect` | Uma rodada na mão (é o que o timer roda) |
 | `make uninstall-timer` | Desliga o vigia |
+
+A ajuda completa, com exemplos, está no próprio comando: `sentinel --help` ou
+`sentinel help today`.
 
 | Onde fica | |
 |---|---|

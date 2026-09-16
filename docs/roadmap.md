@@ -30,8 +30,8 @@ fora. Nada aqui é compromisso de ordem.
   Precisa de heurística (nome mDNS, horário, padrão de uso).
 - **Identificação extra:** NetBIOS, SSDP/UPnP (TV, Chromecast, impressora),
   fingerprint de DHCP.
-- **Atualizar a base de fabricantes (OUI).** A de `/usr/share/ieee-data` está
-  desatualizada: o roteador (`D8:44:89`) não aparece nela.
+- **Atualizar a lista de fabricantes sozinho.** Hoje é manual (`sentinel
+  update-vendors`); a lista do IEEE muda pouco, uma vez por mês bastaria.
 - **Presença** (iPhone saiu ou chegou), indo para o resumo do dia do Jarvis.
 - **Uso de banda por aparelho e bloqueio.** Só pela API ou SNMP do roteador; sem
   ser o gateway, o tráfego não passa pelo PC.
