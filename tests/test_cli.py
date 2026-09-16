@@ -492,3 +492,16 @@ def test_main_today_accepts_yesterday_and_a_date(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out.startswith("Dia ")
     assert main(["today", "--data", "14/09"]) == 0
     assert capsys.readouterr().out.startswith("Dia 14/09")
+
+
+def test_a_past_day_without_speedtests_does_not_say_today():
+    report = Today(
+        at=AT,
+        since=datetime(2026, 9, 14, tzinfo=UTC),
+        internet=Quality(samples=0, loss=0.0),
+        outages=[],
+        new_devices=[],
+        until=datetime(2026, 9, 15, tzinfo=UTC),
+        complete=True,
+    )
+    assert "Velocidade: nenhum teste nesse dia" in format_today(report, tz=UTC)

@@ -119,9 +119,9 @@ def speed_now(test: SpeedTest | None, at: datetime) -> str:
     )
 
 
-def speed_today(summary: SpeedSummary, tz: tzinfo | None = None) -> str:
+def speed_today(summary: SpeedSummary, tz: tzinfo | None = None, past: bool = False) -> str:
     if summary.count == 0:
-        return "Velocidade: nenhum teste hoje"
+        return "Velocidade: nenhum teste nesse dia" if past else "Velocidade: nenhum teste hoje"
     if summary.failed == summary.count:
         return f"Velocidade: {summary.count} testes, todos falharam"
     tests = "1 teste" if summary.count == 1 else f"{summary.count} testes"
@@ -185,7 +185,7 @@ def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = 
             f"Latência média {ms(q.avg_ms)} · pior momento {worst}"
             f" · perda {pct(q.loss)} · jitter {jitter(q.jitter_ms)}"
         )
-    lines.append(speed_today(report.speed, tz))
+    lines.append(speed_today(report.speed, tz, past=report.complete))
     if not report.outages:
         lines.append("Quedas: nenhuma")
     else:
