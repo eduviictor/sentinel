@@ -35,6 +35,10 @@ def default_db_path() -> Path:
     return Path(base) / "sentinel" / "sentinel.db"
 
 
+def vendors_download_path() -> Path:
+    return default_db_path().with_name("oui.txt")
+
+
 def load(path: Path | None = None) -> Config:
     path = path or config_path()
     if not path.is_file():

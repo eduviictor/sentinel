@@ -25,9 +25,10 @@ from sentinel.app.report import (
 )
 from sentinel.app.speed import SpeedSummary, run_speedtest
 from sentinel.app.text import ddmm, duration, hhmm, ms, pct, speed
-from sentinel.config import Config, ConfigError, load
+from sentinel.config import Config, ConfigError, load, vendors_download_path
 from sentinel.core.models import Device, Scope, SpeedTest
 from sentinel.discovery.arp import ArpScanner
+from sentinel.discovery.oui import VendorDownloadError, download_vendors, vendors_file
 from sentinel.notify.desktop import DesktopNotifier
 from sentinel.probing.ping import PingProber
 from sentinel.speed.cloudflare import CloudflareSpeedTester
@@ -239,7 +240,11 @@ def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> in
             gateway=config.gateway,
             internet_targets=config.internet_targets,
             prober=PingProber(),
-            scanner=ArpScanner(config.subnet, PingProber(timeout_s=1, workers=64)),
+            scanner=ArpScanner(
+                config.subnet,
+                PingProber(timeout_s=1, workers=64),
+                oui_file=vendors_file(vendors_download_path()),
+            ),
             notifier=DesktopNotifier(),
             store=store,
             clock=utc_now,
@@ -321,6 +326,16 @@ def run_same(config: Config, store: SqliteStore, args: argparse.Namespace) -> in
     return 0
 
 
+def run_update_vendors(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
+    try:
+        count = download_vendors(vendors_download_path())
+    except VendorDownloadError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"{count} fabricantes na base; a próxima varredura já usa a lista nova")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sentinel", description="Vigia da rede de casa.")
     parser.set_defaults(handler=run_now)
@@ -351,6 +366,9 @@ def build_parser() -> argparse.ArgumentParser:
     same.add_argument("first", help="um MAC")
     same.add_argument("second", help="o outro MAC")
     same.set_defaults(handler=run_same)
+    commands.add_parser(
+        "update-vendors", help="baixa a lista de fabricantes atualizada do IEEE"
+    ).set_defaults(handler=run_update_vendors)
     return parser
 
 

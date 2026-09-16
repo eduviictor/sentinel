@@ -2,9 +2,17 @@ import subprocess
 from ipaddress import IPv4Network
 from pathlib import Path
 
+import pytest
+
 from sentinel.core.models import ScannedDevice
 from sentinel.discovery.arp import ArpScanner, parse_arp_table, parse_avahi, resolve_name
-from sentinel.discovery.oui import load_vendors, vendor_for
+from sentinel.discovery.oui import (
+    VendorDownloadError,
+    download_vendors,
+    load_vendors,
+    vendor_for,
+    vendors_file,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HOME = IPv4Network("192.168.0.0/24")
@@ -82,3 +90,57 @@ def test_scan_sweeps_the_network_then_reads_names_and_vendors():
     )
     assert ScannedDevice(mac="d8:44:89:83:53:f0", ip="192.168.0.1") in found
     assert len(found) == 3
+
+
+class FakeDownload:
+    def __init__(self, body: bytes, fail: bool = False) -> None:
+        self.body = body
+        self.fail = fail
+        self.urls: list[str] = []
+
+    def __call__(self, request, timeout):
+        self.urls.append(request.full_url)
+        if self.fail:
+            raise OSError("network is unreachable")
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def read(self):
+        return self.body
+
+
+def ieee_body(entries: int) -> bytes:
+    lines = [f"{n:06X}     (base 16)\t\tVendor {n}" for n in range(entries)]
+    return ("\n".join(lines) + "\nD84489     (base 16)\t\tTP-Link Systems Inc\n").encode()
+
+
+def test_downloaded_vendors_replace_the_file_and_are_counted(tmp_path):
+    dest = tmp_path / "data" / "oui.txt"
+    count = download_vendors(dest, open_url=FakeDownload(ieee_body(20_000)))
+    assert count == 20_001
+    assert vendor_for("d8:44:89:83:53:f0", load_vendors(dest)) == "TP-Link Systems Inc"
+
+
+def test_a_broken_download_keeps_the_old_file(tmp_path):
+    dest = tmp_path / "oui.txt"
+    dest.write_text("D84489     (base 16)\t\tOld Vendor\n")
+    with pytest.raises(VendorDownloadError):
+        download_vendors(dest, open_url=FakeDownload(b"<html>error</html>"))
+    with pytest.raises(VendorDownloadError):
+        download_vendors(dest, open_url=FakeDownload(b"", fail=True))
+    assert vendor_for("d8:44:89:00:00:01", load_vendors(dest)) == "Old Vendor"
+    assert list(tmp_path.iterdir()) == [dest]
+
+
+def test_the_downloaded_file_wins_over_the_system_one(tmp_path):
+    system = tmp_path / "system.txt"
+    system.write_text("x")
+    downloaded = tmp_path / "downloaded.txt"
+    assert vendors_file(downloaded, system) == system
+    downloaded.write_text("y")
+    assert vendors_file(downloaded, system) == downloaded

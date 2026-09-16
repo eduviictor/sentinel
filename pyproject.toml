@@ -38,8 +38,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = ["S101"]
 # Adapters run fixed system binaries (ping, avahi-resolve, notify-send) with argument lists, never a shell.
+# S310: discovery only opens the fixed IEEE https:// URL.
 "src/sentinel/probing/*.py" = ["S603", "S607"]
-"src/sentinel/discovery/*.py" = ["S603", "S607"]
+"src/sentinel/discovery/*.py" = ["S603", "S607", "S310"]
 "src/sentinel/notify/*.py" = ["S603", "S607"]
 "src/sentinel/channels/cli.py" = ["T201"]
 # The speed test only opens fixed https:// constants, never a URL from input.
