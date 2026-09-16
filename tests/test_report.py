@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from conftest import GATEWAY, INTERNET
 
-from sentinel.app.report import DeviceNotFoundError, name_device, now, today
+from sentinel.app.report import DeviceNotFoundError, known_devices, name_device, now, today
 from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
@@ -116,3 +116,25 @@ def test_today_lists_the_speedtests_of_the_day(store):
     store.add_speedtest(speedtest(datetime(2026, 9, 14, 23, 0, tzinfo=UTC)))
     store.add_speedtest(speedtest(datetime(2026, 9, 15, 3, 17, tzinfo=UTC)))
     assert today(store, INTERNET, clock=lambda: NOW, tz=UTC).speed.count == 1
+
+
+def test_known_devices_splits_present_from_away(store):
+    store.record_scan(NOW - timedelta(hours=13), [TV, PHONE])
+    store.record_scan(NOW - timedelta(minutes=2), [PHONE])
+    result = known_devices(store, clock=lambda: NOW)
+    assert [d.mac for d in result.present] == [PHONE.mac]
+    assert [d.mac for d in result.away] == [TV.mac]
+
+
+def test_away_devices_come_most_recent_first(store):
+    old = ScannedDevice(mac="aa:aa:aa:00:00:01", ip="192.168.0.40")
+    store.record_scan(NOW - timedelta(days=3), [old])
+    store.record_scan(NOW - timedelta(hours=5), [TV])
+    store.record_scan(NOW, [PHONE])
+    assert [d.mac for d in known_devices(store, clock=lambda: NOW).away] == [TV.mac, old.mac]
+
+
+def test_no_scan_yet_means_nobody_known(store):
+    result = known_devices(store, clock=lambda: NOW)
+    assert result.present == []
+    assert result.away == []

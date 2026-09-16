@@ -37,6 +37,13 @@ class Today:
     speed: SpeedSummary = field(default_factory=lambda: SpeedSummary(count=0, failed=0))
 
 
+@dataclass(frozen=True, slots=True)
+class KnownDevices:
+    at: datetime
+    present: list[Device]
+    away: list[Device]
+
+
 def now(
     store: Store, gateway: str, internet_targets: Sequence[str], clock: Callable[[], datetime]
 ) -> Now:
@@ -79,6 +86,18 @@ def today(
         outages=store.outages_since(midnight),
         new_devices=[d for d in devices if d.first_seen >= midnight and d.first_seen != initial],
         speed=summarize([t for t in speedtests if t.started_at >= midnight]),
+    )
+
+
+def known_devices(store: Store, clock: Callable[[], datetime]) -> KnownDevices:
+    last_scan = store.last_scan_at()
+    devices = sorted(store.devices(), key=lambda d: d.last_seen, reverse=True)
+    if last_scan is None:
+        return KnownDevices(at=clock(), present=[], away=devices)
+    return KnownDevices(
+        at=clock(),
+        present=[d for d in devices if d.last_seen >= last_scan],
+        away=[d for d in devices if d.last_seen < last_scan],
     )
 
 

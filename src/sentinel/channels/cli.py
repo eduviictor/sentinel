@@ -10,9 +10,18 @@ from ipaddress import IPv4Address
 from pathlib import Path
 
 from sentinel.app.collect import Collector
-from sentinel.app.report import DeviceNotFoundError, Now, Today, name_device, now, today
+from sentinel.app.report import (
+    DeviceNotFoundError,
+    KnownDevices,
+    Now,
+    Today,
+    known_devices,
+    name_device,
+    now,
+    today,
+)
 from sentinel.app.speed import SpeedSummary, run_speedtest
-from sentinel.app.text import duration, hhmm, ms, pct, speed
+from sentinel.app.text import ddmm, duration, hhmm, ms, pct, speed
 from sentinel.config import Config, ConfigError, load
 from sentinel.core.models import Device, Scope, SpeedTest
 from sentinel.discovery.arp import ArpScanner
@@ -168,6 +177,31 @@ def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = 
     return "\n".join(lines)
 
 
+def device_row(device: Device, gateway: str | None) -> str:
+    return (
+        f"  {device.ip:<15} {device_name(device, gateway):<32} {device_origin(device):<22}"
+        f" {device.mac}"
+    )
+
+
+def format_devices(
+    report: KnownDevices, tz: tzinfo | None = None, gateway: str | None = None
+) -> str:
+    if not report.present and not report.away:
+        return "Nenhum aparelho visto ainda."
+    lines = [f"Na rede agora ({len(report.present)}):"]
+    lines += [
+        f"{device_row(d, gateway)}  desde {ddmm(d.first_seen, tz)}"
+        for d in sorted(report.present, key=lambda d: IPv4Address(d.ip))
+    ]
+    if report.away:
+        lines += ["", f"Fora da rede ({len(report.away)}):"]
+        lines += [
+            f"{device_row(d, gateway)}  visto {age(d.last_seen, report.at)}" for d in report.away
+        ]
+    return "\n".join(lines)
+
+
 def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     with round_lock(config.db_path.with_name("collect.lock")) as acquired:
         if not acquired:
@@ -212,6 +246,11 @@ def run_today(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     return 0
 
 
+def run_devices(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
+    print(format_devices(known_devices(store, clock=utc_now), gateway=config.gateway))
+    return 0
+
+
 def run_name(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
     try:
         device = name_device(store, args.device, args.nickname)
@@ -231,6 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("now", help="como está a rede agora").set_defaults(handler=run_now)
     commands.add_parser("today", help="resumo do dia").set_defaults(handler=run_today)
+    commands.add_parser("devices", help="todos os aparelhos já vistos").set_defaults(
+        handler=run_devices
+    )
     commands.add_parser("collect", help="uma rodada de medição (usada pelo timer)").set_defaults(
         handler=run_collect
     )

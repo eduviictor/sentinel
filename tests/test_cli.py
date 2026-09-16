@@ -1,11 +1,11 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from sentinel.app.report import Now, Today
+from sentinel.app.report import KnownDevices, Now, Today
 from sentinel.app.speed import SpeedSummary
 from sentinel.app.stats import Quality
 from sentinel.channels import cli
-from sentinel.channels.cli import format_now, format_today, main, round_lock
+from sentinel.channels.cli import format_devices, format_now, format_today, main, round_lock
 from sentinel.config import EXAMPLE
 from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
 from sentinel.storage.sqlite import SqliteStore
@@ -367,3 +367,25 @@ def test_sentinel_alone_shows_now(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     assert main([]) == 0
     assert "Internet:" in capsys.readouterr().out
+
+
+def test_devices_lists_who_is_here_and_who_left():
+    away = replace(PHONE, last_seen=AT - timedelta(hours=13), mdns_name=None)
+    router = Device(
+        mac="d8:44:89:83:53:f0", ip="192.168.0.1", first_seen=AT - timedelta(days=1), last_seen=AT
+    )
+    text = format_devices(
+        KnownDevices(at=AT, present=[router], away=[away]), tz=UTC, gateway="192.168.0.1"
+    )
+    lines = text.splitlines()
+    assert lines[0] == "Na rede agora (1):"
+    assert "192.168.0.1" in lines[1] and "Roteador" in lines[1]
+    assert "d8:44:89:83:53:f0" in lines[1] and "desde 14/09" in lines[1]
+    assert lines[3] == "Fora da rede (1):"
+    assert "e6:7b:21:a5:94:4a" in lines[4] and "visto há 13 h" in lines[4]
+
+
+def test_devices_before_any_scan():
+    assert (
+        format_devices(KnownDevices(at=AT, present=[], away=[])) == "Nenhum aparelho visto ainda."
+    )

@@ -15,6 +15,10 @@ def duration(delta: timedelta) -> str:
     return f"{hours} h {rest} min" if rest else f"{hours} h"
 
 
+def ddmm(at: datetime, tz: tzinfo | None = None) -> str:
+    return at.astimezone(tz).strftime("%d/%m")
+
+
 def ms(value: float | None) -> str:
     return "sem resposta" if value is None else f"{value:.0f} ms"
 
