@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
-from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope
+from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
 
 
 class Prober(Protocol):
@@ -11,6 +11,10 @@ class Prober(Protocol):
 
 class Scanner(Protocol):
     def scan(self) -> list[ScannedDevice]: ...
+
+
+class SpeedTester(Protocol):
+    def measure(self) -> tuple[float | None, float | None]: ...
 
 
 class Notifier(Protocol):
@@ -41,3 +45,9 @@ class Store(Protocol):
     def set_nickname(self, mac: str, nickname: str) -> None: ...
 
     def prune(self, before: datetime) -> None: ...
+
+    def add_speedtest(self, test: SpeedTest) -> None: ...
+
+    def speedtests_since(self, since: datetime) -> list[SpeedTest]: ...
+
+    def last_speedtest(self) -> SpeedTest | None: ...

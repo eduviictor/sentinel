@@ -24,6 +24,14 @@ class Outage:
 
 
 @dataclass(frozen=True, slots=True)
+class SpeedTest:
+    started_at: datetime
+    ended_at: datetime
+    download_mbps: float | None
+    upload_mbps: float | None
+
+
+@dataclass(frozen=True, slots=True)
 class ScannedDevice:
     mac: str
     ip: str

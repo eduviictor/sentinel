@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from sentinel.core.models import Measurement, ScannedDevice, Scope
+from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
 from sentinel.storage.sqlite import SqliteStore
 
 T0 = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
@@ -112,3 +112,32 @@ def test_prune_without_old_data_changes_nothing(store):
     store.prune(before=T0 - timedelta(days=30))
     assert len(store.measurements_since(T0)) == 1
     assert store.last_scan_at() == T0
+
+
+def speed(minutes, down=480.0, up=95.0):
+    started = T0 + timedelta(minutes=minutes)
+    return SpeedTest(
+        started_at=started,
+        ended_at=started + timedelta(seconds=6),
+        download_mbps=down,
+        upload_mbps=up,
+    )
+
+
+def test_speedtests_come_back_in_order_including_failures(store):
+    store.add_speedtest(speed(180, down=None, up=None))
+    store.add_speedtest(speed(0))
+    assert [s.download_mbps for s in store.speedtests_since(T0)] == [480.0, None]
+    assert store.last_speedtest() == speed(180, down=None, up=None)
+    assert store.speedtests_since(T0 + timedelta(minutes=1)) == [speed(180, down=None, up=None)]
+
+
+def test_no_speedtest_yet(store):
+    assert store.last_speedtest() is None
+    assert store.speedtests_since(T0) == []
+
+
+def test_prune_keeps_speedtests(store):
+    store.add_speedtest(speed(-60 * 24 * 40))
+    store.prune(before=T0 - timedelta(days=30))
+    assert store.last_speedtest() is not None

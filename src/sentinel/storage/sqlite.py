@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Self
 
-from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope
+from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS probes (
@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS outages (
     ended_at TEXT,
     scope TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS speedtests (
+    started_at TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    download_mbps REAL,
+    upload_mbps REAL
+);
+CREATE INDEX IF NOT EXISTS speedtests_started_at ON speedtests (started_at);
 """
 
 
@@ -56,6 +63,13 @@ def group_measurements(rows: Iterable[tuple[str, str, float | None]]) -> list[Me
     for at, target, rtt in rows:
         grouped.setdefault(at, {})[target] = rtt
     return [Measurement(at=from_text(at), rtt_ms=rtt_ms) for at, rtt_ms in grouped.items()]
+
+
+def to_speedtest(row: tuple[str, str, float | None, float | None]) -> SpeedTest:
+    started, ended, down, up = row
+    return SpeedTest(
+        started_at=from_text(started), ended_at=from_text(ended), download_mbps=down, upload_mbps=up
+    )
 
 
 class SqliteStore:
@@ -174,6 +188,34 @@ class SqliteStore:
     def set_nickname(self, mac: str, nickname: str) -> None:
         with self._db:
             self._db.execute("UPDATE devices SET nickname = ? WHERE mac = ?", (nickname, mac))
+
+    def add_speedtest(self, test: SpeedTest) -> None:
+        with self._db:
+            self._db.execute(
+                "INSERT INTO speedtests (started_at, ended_at, download_mbps, upload_mbps)"
+                " VALUES (?, ?, ?, ?)",
+                (
+                    to_text(test.started_at),
+                    to_text(test.ended_at),
+                    test.download_mbps,
+                    test.upload_mbps,
+                ),
+            )
+
+    def speedtests_since(self, since: datetime) -> list[SpeedTest]:
+        rows = self._db.execute(
+            "SELECT started_at, ended_at, download_mbps, upload_mbps FROM speedtests"
+            " WHERE started_at >= ? ORDER BY started_at",
+            (to_text(since),),
+        )
+        return [to_speedtest(row) for row in rows]
+
+    def last_speedtest(self) -> SpeedTest | None:
+        row = self._db.execute(
+            "SELECT started_at, ended_at, download_mbps, upload_mbps FROM speedtests"
+            " ORDER BY started_at DESC LIMIT 1"
+        ).fetchone()
+        return to_speedtest(row) if row else None
 
     def prune(self, before: datetime) -> None:
         # Cut on a minute boundary so a minute is never summarised from half its pings.
