@@ -361,3 +361,9 @@ def test_a_single_speedtest_does_not_repeat_itself_as_the_slowest():
         if line.startswith("Velocidade")
     ]
     assert line == "Velocidade: 1 teste · download médio 662 Mbps · upload médio 188 Mbps"
+
+
+def test_sentinel_alone_shows_now(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    assert main([]) == 0
+    assert "Internet:" in capsys.readouterr().out

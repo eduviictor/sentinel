@@ -227,7 +227,8 @@ def run_name(config: Config, store: SqliteStore, args: argparse.Namespace) -> in
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sentinel", description="Vigia da rede de casa.")
-    commands = parser.add_subparsers(dest="command", required=True)
+    parser.set_defaults(handler=run_now)
+    commands = parser.add_subparsers(dest="command")
     commands.add_parser("now", help="como está a rede agora").set_defaults(handler=run_now)
     commands.add_parser("today", help="resumo do dia").set_defaults(handler=run_today)
     commands.add_parser("collect", help="uma rodada de medição (usada pelo timer)").set_defaults(
