@@ -1,8 +1,9 @@
+import socket
 from urllib.error import URLError
 
 import pytest
 
-from sentinel.speed.cloudflare import CloudflareSpeedTester, mbps
+from sentinel.speed.cloudflare import CloudflareSpeedTester, bound_connection, mbps
 
 MB = 1_000_000
 
@@ -123,3 +124,35 @@ def test_requests_identify_themselves():
     network = FakeNetwork(down={1 * MB: 2.0}, up={1 * MB: 2.0})
     speed_tester(network).measure()
     assert {agent for _, agent, _ in network.requests} == {"sentinel"}
+
+
+class FakeSocket:
+    def __init__(self, *args):
+        self.options = []
+        self.connected_to = None
+        self.timeout = None
+
+    def setsockopt(self, level, option, value):
+        self.options.append((level, option, value))
+
+    def settimeout(self, timeout):
+        self.timeout = timeout
+
+    def connect(self, address):
+        self.connected_to = address
+
+
+def test_a_bound_connection_is_pinned_to_the_interface_before_connecting():
+    created = []
+
+    def factory(*args):
+        sock = FakeSocket(*args)
+        created.append(sock)
+        return sock
+
+    sock = bound_connection(
+        "enp37s0", ("speed.cloudflare.com", 443), timeout=15, socket_factory=factory
+    )
+    assert sock.options == [(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, b"enp37s0")]
+    assert sock.connected_to == ("speed.cloudflare.com", 443)
+    assert sock.timeout == 15

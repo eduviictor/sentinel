@@ -16,14 +16,15 @@ def parse_rtt(output: str) -> float | None:
 
 
 class PingProber:
-    def __init__(self, timeout_s: int = 2, workers: int = 8) -> None:
+    def __init__(self, timeout_s: int = 2, workers: int = 8, interface: str | None = None) -> None:
         self._timeout_s = timeout_s
         self._workers = workers
+        self._through = ["-I", interface] if interface else []
 
     def ping(self, target: str) -> float | None:
         try:
             result = subprocess.run(
-                ["ping", "-n", "-c", "1", "-W", str(self._timeout_s), target],
+                ["ping", "-n", "-c", "1", "-W", str(self._timeout_s), *self._through, target],
                 capture_output=True,
                 text=True,
                 timeout=self._timeout_s + 3,

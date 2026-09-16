@@ -337,7 +337,7 @@ class FakeTester:
 
 def test_main_speedtest_measures_stores_and_prints(tmp_path, monkeypatch, capsys):
     db = configure(tmp_path, monkeypatch)
-    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((480.0, 95.0)))
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda **kwargs: FakeTester((480.0, 95.0)))
     assert main(["speedtest"]) == 0
     assert "Download 480 Mbps · Upload 95 Mbps" in capsys.readouterr().out
     with SqliteStore(db) as store:
@@ -346,14 +346,14 @@ def test_main_speedtest_measures_stores_and_prints(tmp_path, monkeypatch, capsys
 
 def test_main_speedtest_failure_exits_nonzero(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
-    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((None, None)))
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda **kwargs: FakeTester((None, None)))
     assert main(["speedtest"]) == 1
     assert "o teste falhou" in capsys.readouterr().err
 
 
 def test_speedtest_steps_aside_when_another_is_running(tmp_path, monkeypatch, capsys):
     db = configure(tmp_path, monkeypatch)
-    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((480.0, 95.0)))
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda **kwargs: FakeTester((480.0, 95.0)))
     with round_lock(db.with_name("speedtest.lock")):
         assert main(["speedtest"]) == 0
     assert "outro teste de velocidade já está em andamento" in capsys.readouterr().err
@@ -526,12 +526,17 @@ def running_status(**overrides):
 
 def test_status_when_everything_runs():
     text = format_status(
-        running_status(), db_bytes=412_000, vendors_downloaded=AT.replace(day=16), tz=UTC
+        running_status(),
+        db_bytes=412_000,
+        vendors_downloaded=AT.replace(day=16),
+        interface="enp37s0",
+        tz=UTC,
     )
     assert text.splitlines() == [
         "Medição (a cada minuto): ligada · última medição agora",
         "Varredura de aparelhos: última há 3 min",
         "Speedtest (a cada 3 h): ligado · último há 11 min (662 Mbps) · próximo às 23:17",
+        "Rede medida: placa enp37s0 (fora de VPN)",
         "Fabricantes: lista do IEEE de 16/09",
         "Banco de dados: 412 KB",
         "",
@@ -574,3 +579,28 @@ def test_main_status_runs(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "SystemdTimers", lambda: type("T", (), {"active": lambda self: {}})())
     assert main(["status"]) == 0
     assert "DESLIGADA" in capsys.readouterr().out
+
+
+def test_status_warns_when_the_home_interface_is_unknown():
+    text = format_status(
+        running_status(), db_bytes=1, vendors_downloaded=None, interface=None, tz=UTC
+    )
+    assert (
+        "Rede medida: placa não encontrada — com VPN ligada, a internet medida é a da VPN" in text
+    )
+
+
+def test_collect_and_speedtest_measure_through_the_home_interface(tmp_path, monkeypatch):
+    configure(tmp_path, monkeypatch)
+    seen = {}
+    monkeypatch.setattr(
+        cli, "interface_towards", lambda gateway: seen.setdefault("gateway", gateway) and "enp37s0"
+    )
+
+    def tester(**kwargs):
+        seen["tester"] = kwargs
+        return FakeTester((480.0, 95.0))
+
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", tester)
+    assert main(["speedtest"]) == 0
+    assert seen == {"gateway": "192.168.0.1", "tester": {"interface": "enp37s0"}}

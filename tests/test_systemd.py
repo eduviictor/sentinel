@@ -2,6 +2,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+from sentinel.system.network import interface_towards
 from sentinel.system.systemd import SystemdTimers, parse_timers
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -49,3 +50,25 @@ def test_garbage_output_means_nothing_active(monkeypatch):
         ),
     )
     assert SystemdTimers().active() == {}
+
+
+def test_the_home_interface_is_the_one_that_reaches_the_router(monkeypatch):
+    calls = []
+    output = '[{"dst":"192.168.0.1","dev":"enp37s0","prefsrc":"192.168.0.6","flags":[],"uid":1000,"cache":[]}]'
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout=output, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert interface_towards("192.168.0.1") == "enp37s0"
+    assert calls == [["ip", "-j", "route", "get", "192.168.0.1"]]
+
+
+def test_no_route_means_no_interface(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda argv, **k: subprocess.CompletedProcess(argv, 2, stdout="", stderr="unreachable"),
+    )
+    assert interface_towards("192.168.0.1") is None

@@ -36,6 +36,7 @@ from sentinel.notify.desktop import DesktopNotifier
 from sentinel.probing.ping import PingProber
 from sentinel.speed.cloudflare import CloudflareSpeedTester
 from sentinel.storage.sqlite import SqliteStore
+from sentinel.system.network import interface_towards
 from sentinel.system.systemd import SystemdTimers
 
 SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
@@ -293,6 +294,7 @@ def format_status(
     report: Status,
     db_bytes: int,
     vendors_downloaded: datetime | None,
+    interface: str | None = None,
     tz: tzinfo | None = None,
 ) -> str:
     scan = f"última {age(report.last_scan, report.at)}" if report.last_scan else "nenhuma ainda"
@@ -312,6 +314,9 @@ def format_status(
             collect_line(report),
             f"Varredura de aparelhos: {scan}",
             speedtest_line(report, tz),
+            f"Rede medida: placa {interface} (fora de VPN)"
+            if interface
+            else "Rede medida: placa não encontrada — com VPN ligada, a internet medida é a da VPN",
             f"Fabricantes: {vendors}",
             f"Banco de dados: {size(db_bytes)}",
             "",
@@ -325,13 +330,14 @@ def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> in
         if not acquired:
             print("outra rodada já está em andamento; esta foi ignorada", file=sys.stderr)
             return 0
+        interface = interface_towards(config.gateway)
         Collector(
             gateway=config.gateway,
             internet_targets=config.internet_targets,
-            prober=PingProber(),
+            prober=PingProber(interface=interface),
             scanner=ArpScanner(
                 config.subnet,
-                PingProber(timeout_s=1, workers=64),
+                PingProber(timeout_s=1, workers=64, interface=interface),
                 oui_file=vendors_file(vendors_download_path()),
             ),
             notifier=DesktopNotifier(),
@@ -348,7 +354,7 @@ def run_speed(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
             print("outro teste de velocidade já está em andamento", file=sys.stderr)
             return 0
         test = run_speedtest(
-            CloudflareSpeedTester(),
+            CloudflareSpeedTester(interface=interface_towards(config.gateway)),
             store,
             utc_now,
             notifier=DesktopNotifier(),
@@ -385,7 +391,10 @@ def run_status(config: Config, store: SqliteStore, _: argparse.Namespace) -> int
     vendors = vendors_download_path()
     downloaded = datetime.fromtimestamp(vendors.stat().st_mtime, UTC) if vendors.exists() else None
     report = status(store, SystemdTimers(), clock=utc_now)
-    print(format_status(report, db_bytes=db_bytes, vendors_downloaded=downloaded))
+    interface = interface_towards(config.gateway)
+    print(
+        format_status(report, db_bytes=db_bytes, vendors_downloaded=downloaded, interface=interface)
+    )
     return 0
 
 
