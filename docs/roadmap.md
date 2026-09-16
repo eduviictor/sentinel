@@ -5,12 +5,10 @@ fora. Nada aqui é compromisso de ordem.
 
 ## Internet
 
-- **Avisar quando a velocidade ficar abaixo do contratado.** Precisa saber o plano
-  (ex.: 500 Mbps) e decidir o limite (ex.: menos de 50% em 2 testes seguidos).
 - **Qualidade do Wi-Fi.** O PC é cabeado: mede a internet, não o Wi-Fi. Exige
   medir a partir de um aparelho sem fio.
-- **Horário de silêncio para notificações.** No MVP, a notificação sai a qualquer
-  hora (silenciosa no Cinnamon).
+- **Horário de silêncio para notificações.** Hoje a notificação sai a qualquer hora
+  (silenciosa no Cinnamon). Sem pressa enquanto o PC fica desligado à noite.
 - **Jitter por destino.** Hoje o jitter usa, a cada medição, o destino que
   respondeu mais rápido; se um deles perde uma resposta, a troca de destino
   aparece como variação. Calcular por destino separa as duas coisas.
@@ -25,6 +23,9 @@ fora. Nada aqui é compromisso de ordem.
 
 - **Notificar quando um aparelho importante cair** (câmera, TV). Exige marcar quais
   são importantes.
+- **Juntar sozinho o celular que trocou de MAC.** Hoje `sentinel same` junta na mão;
+  o primeiro caso real foi em 16/09 (mesmo IP, os dois MACs aleatórios). Automatizar
+  depois de ver mais casos, porque o roteador pode reaproveitar o IP de outro aparelho.
 - **MAC aleatório sem aviso falso.** Celular que troca de MAC aparece como "novo".
   Precisa de heurística (nome mDNS, horário, padrão de uso).
 - **Identificação extra:** NetBIOS, SSDP/UPnP (TV, Chromecast, impressora),
@@ -50,7 +51,8 @@ fora. Nada aqui é compromisso de ordem.
 ## Visualização
 
 - **Gráficos:** página web própria ou o lab Grafana local
-  (`~/Documents/dev/grafana-local`) lendo o SQLite.
+  (`~/Documents/dev/grafana-local`) lendo o SQLite. Próximo foco combinado com o
+  Eduardo. Hoje `sentinel history` mostra a mesma ideia em tabela.
 
 ## Configuração
 

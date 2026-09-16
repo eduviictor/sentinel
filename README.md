@@ -63,6 +63,8 @@ E as notificações:
 | O roteador some | **Rede de casa caiu** — às 21:14, roteador não responde |
 | Volta | **Internet voltou** — às 21:17, ficou fora 3 min |
 | Aparelho nunca visto | **Aparelho novo na rede** — Samsung, 192.168.0.21 |
+| Download abaixo da metade do plano em 2 testes seguidos | **Internet lenta** — 310 e 300 Mbps, plano de 700 Mbps |
+| Depois disso, um teste normal | **Velocidade normal de novo** — voltou a 650 Mbps |
 
 > Não sabe o que é latência, jitter ou MAC? Está tudo explicado em linguagem
 > simples em [`docs/rede.md`](docs/rede.md).
@@ -123,6 +125,7 @@ cp config.example.toml ~/.config/sentinel/config.toml
 gateway = "192.168.0.1"              # o roteador
 subnet = "192.168.0.0/24"            # a rede da casa
 internet_targets = ["1.1.1.1", "8.8.8.8"]
+plan_mbps = 700                      # opcional: a velocidade do seu plano
 ```
 
 Não sabe os seus? `ip route | grep default` mostra o roteador depois de `via`. A
@@ -143,9 +146,12 @@ teste de velocidade roda no próximo horário (00:17, 03:17, 06:17…).
 
 | Comando | O que faz |
 |---|---|
-| `uv run sentinel now` | Como está a rede agora |
+| `uv run sentinel` ou `uv run sentinel now` | Como está a rede agora |
 | `uv run sentinel today` | Resumo do dia |
+| `uv run sentinel history` | A internet por hora do dia nos últimos 7 dias (`--days 1-30`) |
+| `uv run sentinel devices` | Todos os aparelhos já vistos, com MAC, inclusive os que saíram |
 | `uv run sentinel name 192.168.0.13 "TV sala"` | Dá apelido a um aparelho (aceita IP ou MAC) |
+| `uv run sentinel same 6e:ae:… ce:f3:…` | Junta os dois MACs de um celular que trocou de MAC |
 | `uv run sentinel speedtest` | Mede download e upload agora |
 | `uv run sentinel collect` | Uma rodada na mão (é o que o timer roda) |
 | `make uninstall-timer` | Desliga o vigia |
@@ -169,7 +175,7 @@ Sendo honesto sobre o que ele ainda não faz:
 - **O speedtest gasta banda:** até ~170 MB por teste, ~1,4 GB por dia. E usa os
   endereços de teste do site da Cloudflare, que não são uma API oficial.
 
-O que vem depois — aviso de velocidade baixa, gráficos, rodar 24 h, integração com o Jarvis — está
+O que vem depois — gráficos, rodar 24 h, integração com o Jarvis — está
 no [roadmap](docs/roadmap.md).
 
 ---
