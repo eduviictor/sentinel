@@ -29,3 +29,9 @@ def pct(value: float) -> str:
 
 def speed(value: float | None) -> str:
     return "—" if value is None else f"{value:.0f} Mbps"
+
+
+def size(num_bytes: int) -> str:
+    if num_bytes < 1_000_000:
+        return f"{num_bytes / 1000:.0f} KB"
+    return f"{num_bytes / 1_000_000:.1f} MB".replace(".", ",")

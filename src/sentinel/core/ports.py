@@ -17,6 +17,10 @@ class SpeedTester(Protocol):
     def measure(self) -> tuple[float | None, float | None]: ...
 
 
+class Timers(Protocol):
+    def active(self) -> dict[str, datetime | None]: ...
+
+
 class Notifier(Protocol):
     def notify(self, title: str, body: str) -> None: ...
 

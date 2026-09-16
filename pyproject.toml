@@ -42,6 +42,7 @@ ignore = [
 "src/sentinel/probing/*.py" = ["S603", "S607"]
 "src/sentinel/discovery/*.py" = ["S603", "S607", "S310"]
 "src/sentinel/notify/*.py" = ["S603", "S607"]
+"src/sentinel/system/*.py" = ["S603", "S607"]
 "src/sentinel/channels/cli.py" = ["T201"]
 # The speed test only opens fixed https:// constants, never a URL from input.
 "src/sentinel/speed/*.py" = ["S310"]

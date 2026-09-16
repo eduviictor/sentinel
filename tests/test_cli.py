@@ -7,11 +7,13 @@ from sentinel.app.history import History, HourStats
 from sentinel.app.report import KnownDevices, Now, Today
 from sentinel.app.speed import SpeedSummary
 from sentinel.app.stats import Quality
+from sentinel.app.status import Status
 from sentinel.channels import cli
 from sentinel.channels.cli import (
     format_devices,
     format_history,
     format_now,
+    format_status,
     format_today,
     main,
     parse_day,
@@ -505,3 +507,70 @@ def test_a_past_day_without_speedtests_does_not_say_today():
         complete=True,
     )
     assert "Velocidade: nenhum teste nesse dia" in format_today(report, tz=UTC)
+
+
+def running_status(**overrides):
+    fields = {
+        "at": AT,
+        "collect_on": True,
+        "speedtest_on": True,
+        "next_speedtest": AT.replace(hour=23, minute=17),
+        "last_measurement": AT - timedelta(seconds=20),
+        "last_scan": AT - timedelta(minutes=3),
+        "last_speedtest": SpeedTest(
+            AT - timedelta(minutes=11), AT - timedelta(minutes=10), 662.0, 188.0
+        ),
+    }
+    return Status(**(fields | overrides))
+
+
+def test_status_when_everything_runs():
+    text = format_status(
+        running_status(), db_bytes=412_000, vendors_downloaded=AT.replace(day=16), tz=UTC
+    )
+    assert text.splitlines() == [
+        "Medição (a cada minuto): ligada · última medição agora",
+        "Varredura de aparelhos: última há 3 min",
+        "Speedtest (a cada 3 h): ligado · último há 11 min (662 Mbps) · próximo às 23:17",
+        "Fabricantes: lista do IEEE de 16/09",
+        "Banco de dados: 412 KB",
+        "",
+        "Tudo funcionando.",
+    ]
+
+
+def test_status_when_the_timers_are_off():
+    report = running_status(
+        collect_on=False,
+        speedtest_on=False,
+        next_speedtest=None,
+        last_measurement=None,
+        last_scan=None,
+        last_speedtest=None,
+    )
+    text = format_status(report, db_bytes=2_500_000, vendors_downloaded=None, tz=UTC)
+    assert "Medição (a cada minuto): DESLIGADA — ligue com make install-timer" in text
+    assert "Varredura de aparelhos: nenhuma ainda" in text
+    assert "Speedtest (a cada 3 h): DESLIGADO" in text
+    assert (
+        "Fabricantes: lista do sistema, desatualizada — atualize com sentinel update-vendors"
+        in text
+    )
+    assert "Banco de dados: 2,5 MB" in text
+    assert text.splitlines()[-1] == "O sentinel não está medindo."
+
+
+def test_status_when_on_but_stuck():
+    report = running_status(last_measurement=AT - timedelta(hours=2))
+    text = format_status(report, db_bytes=412_000, vendors_downloaded=None, tz=UTC)
+    assert "Medição (a cada minuto): ligada, mas sem medição há 2 h" in text
+    assert (
+        text.splitlines()[-1] == "Ligada mas parada: veja o log com journalctl --user -u sentinel"
+    )
+
+
+def test_main_status_runs(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "SystemdTimers", lambda: type("T", (), {"active": lambda self: {}})())
+    assert main(["status"]) == 0
+    assert "DESLIGADA" in capsys.readouterr().out

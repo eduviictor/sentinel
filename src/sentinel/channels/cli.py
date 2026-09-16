@@ -25,7 +25,8 @@ from sentinel.app.report import (
     today,
 )
 from sentinel.app.speed import SpeedSummary, run_speedtest
-from sentinel.app.text import ddmm, duration, hhmm, ms, pct, speed
+from sentinel.app.status import Status, status
+from sentinel.app.text import ddmm, duration, hhmm, ms, pct, size, speed
 from sentinel.config import Config, ConfigError, load, vendors_download_path
 from sentinel.core.models import Device, Scope, SpeedTest
 from sentinel.discovery.arp import ArpScanner
@@ -34,6 +35,7 @@ from sentinel.notify.desktop import DesktopNotifier
 from sentinel.probing.ping import PingProber
 from sentinel.speed.cloudflare import CloudflareSpeedTester
 from sentinel.storage.sqlite import SqliteStore
+from sentinel.system.systemd import SystemdTimers
 
 SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
 
@@ -258,6 +260,63 @@ def format_history(report: History) -> str:
     return "\n".join(lines)
 
 
+def collect_line(report: Status) -> str:
+    label = "Medição (a cada minuto)"
+    if not report.collect_on:
+        return f"{label}: DESLIGADA — ligue com make install-timer"
+    if report.last_measurement is None:
+        return f"{label}: ligada, ainda sem medição"
+    if not report.measuring:
+        return f"{label}: ligada, mas sem medição {age(report.last_measurement, report.at)}"
+    return f"{label}: ligada · última medição {age(report.last_measurement, report.at)}"
+
+
+def speedtest_line(report: Status, tz: tzinfo | None) -> str:
+    label = "Speedtest (a cada 3 h)"
+    if not report.speedtest_on:
+        return f"{label}: DESLIGADO"
+    parts = [f"{label}: ligado"]
+    test = report.last_speedtest
+    if test is None:
+        parts.append("ainda sem teste")
+    else:
+        parts.append(f"último {age(test.started_at, report.at)} ({speed(test.download_mbps)})")
+    if report.next_speedtest is not None:
+        parts.append(f"próximo às {hhmm(report.next_speedtest, tz)}")
+    return " · ".join(parts)
+
+
+def format_status(
+    report: Status,
+    db_bytes: int,
+    vendors_downloaded: datetime | None,
+    tz: tzinfo | None = None,
+) -> str:
+    scan = f"última {age(report.last_scan, report.at)}" if report.last_scan else "nenhuma ainda"
+    vendors = (
+        f"lista do IEEE de {ddmm(vendors_downloaded, tz)}"
+        if vendors_downloaded
+        else "lista do sistema, desatualizada — atualize com sentinel update-vendors"
+    )
+    if report.measuring:
+        verdict = "Tudo funcionando."
+    elif report.collect_on:
+        verdict = "Ligada mas parada: veja o log com journalctl --user -u sentinel"
+    else:
+        verdict = "O sentinel não está medindo."
+    return "\n".join(
+        [
+            collect_line(report),
+            f"Varredura de aparelhos: {scan}",
+            speedtest_line(report, tz),
+            f"Fabricantes: {vendors}",
+            f"Banco de dados: {size(db_bytes)}",
+            "",
+            verdict,
+        ]
+    )
+
+
 def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     with round_lock(config.db_path.with_name("collect.lock")) as acquired:
         if not acquired:
@@ -314,6 +373,16 @@ def run_today(config: Config, store: SqliteStore, args: argparse.Namespace) -> i
 
 def run_history(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
     print(format_history(history(store, config.internet_targets, clock=utc_now, days=args.days)))
+    return 0
+
+
+def run_status(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
+    db_files = [config.db_path, config.db_path.with_name(config.db_path.name + "-wal")]
+    db_bytes = sum(path.stat().st_size for path in db_files if path.exists())
+    vendors = vendors_download_path()
+    downloaded = datetime.fromtimestamp(vendors.stat().st_mtime, UTC) if vendors.exists() else None
+    report = status(store, SystemdTimers(), clock=utc_now)
+    print(format_status(report, db_bytes=db_bytes, vendors_downloaded=downloaded))
     return 0
 
 
@@ -378,6 +447,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--days", type=int, default=7, choices=range(1, 31), metavar="1-30", help="padrão: 7"
     )
     past.set_defaults(handler=run_history)
+    commands.add_parser("status", help="o sentinel está funcionando?").set_defaults(
+        handler=run_status
+    )
     commands.add_parser("devices", help="todos os aparelhos já vistos").set_defaults(
         handler=run_devices
     )
