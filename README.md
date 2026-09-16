@@ -97,6 +97,8 @@ flowchart LR
 - **Velocidade sem atrapalhar a latência.** Durante o speedtest a conexão fica cheia;
   os pings desses segundos não entram na latência
   ([ADR-0004](docs/adrs/0004-speedtest-pela-cloudflare.md)).
+- **VPN não atrapalha.** Mesmo com a VPN do trabalho ligada, as medições saem pelo
+  cabo de casa ([ADR-0005](docs/adrs/0005-medir-fora-da-vpn.md)).
 - **Sem permissão de administrador.** A descoberta usa o `ping` do sistema e a tabela
   de vizinhos que o Linux já mantém ([ADR-0003](docs/adrs/0003-descoberta-sem-root.md)).
 
@@ -204,6 +206,7 @@ src/sentinel/
 ├── discovery/   tabela ARP, avahi, fabricantes
 ├── storage/     SQLite
 ├── notify/      notify-send
+├── system/      systemd e rotas de rede
 └── channels/    o comando sentinel
 ```
 
@@ -213,6 +216,7 @@ As decisões e o porquê de cada uma:
 - [ADR-0002](docs/adrs/0002-sqlite-e-retencao.md) — SQLite, com ping por 30 dias e resumo por minuto para sempre
 - [ADR-0003](docs/adrs/0003-descoberta-sem-root.md) — descoberta de aparelhos sem permissão de administrador
 - [ADR-0004](docs/adrs/0004-speedtest-pela-cloudflare.md) — speedtest pela Cloudflare, a cada 3 horas
+- [ADR-0005](docs/adrs/0005-medir-fora-da-vpn.md) — medir pela placa de casa, fora de VPN
 
 ### Desenvolvimento
 

@@ -66,6 +66,13 @@ arquivo pequeno termina antes de a conexão chegar à velocidade máxima.
 Durante esses poucos segundos a conexão fica cheia, e os pings da mesma hora
 demoram mais. Por isso eles não entram na latência de `now` e `today` (ADR-0004).
 
+## E se houver VPN ligada?
+
+Uma VPN costuma levar todo o tráfego de internet do PC para dentro dela. Se o
+`sentinel` medisse por esse caminho, mediria a VPN, e não a sua internet. Por isso
+os pings e o speedtest saem sempre pela placa de rede que chega no roteador de
+casa (ADR-0005). O `sentinel status` mostra qual placa é essa.
+
 ## Limites
 
 - O PC está no cabo: o `sentinel` mede a internet, não a qualidade do Wi-Fi.
