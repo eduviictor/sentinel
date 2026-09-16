@@ -4,6 +4,8 @@ install:
 	uv sync
 	@if [ "$$(git rev-parse --git-dir)" = "$$(git rev-parse --git-common-dir)" ]; then \
 		uv run pre-commit install; \
+		mkdir -p ~/.local/bin && ln -sf $(CURDIR)/.venv/bin/sentinel ~/.local/bin/sentinel; \
+		echo "comando instalado: ~/.local/bin/sentinel"; \
 	elif [ -f "$$(git rev-parse --git-common-dir)/hooks/pre-commit" ]; then \
 		echo "worktree: the pre-commit hook is shared with the main checkout, not reinstalled"; \
 	else \

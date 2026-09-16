@@ -114,6 +114,8 @@ e `notify-send`. Para nome e fabricante dos aparelhos, `avahi-resolve` e o pacot
 make install
 ```
 
+Isso também coloca o comando `sentinel` em `~/.local/bin`, para usar de qualquer pasta.
+
 **2. Dizer qual é a sua rede**
 
 ```bash
@@ -146,14 +148,14 @@ teste de velocidade roda no próximo horário (00:17, 03:17, 06:17…).
 
 | Comando | O que faz |
 |---|---|
-| `uv run sentinel` ou `uv run sentinel now` | Como está a rede agora |
-| `uv run sentinel today` | Resumo do dia |
-| `uv run sentinel history` | A internet por hora do dia nos últimos 7 dias (`--days 1-30`) |
-| `uv run sentinel devices` | Todos os aparelhos já vistos, com MAC, inclusive os que saíram |
-| `uv run sentinel name 192.168.0.13 "TV sala"` | Dá apelido a um aparelho (aceita IP ou MAC) |
-| `uv run sentinel same 6e:ae:… ce:f3:…` | Junta os dois MACs de um celular que trocou de MAC |
-| `uv run sentinel speedtest` | Mede download e upload agora |
-| `uv run sentinel collect` | Uma rodada na mão (é o que o timer roda) |
+| `sentinel` ou `sentinel now` | Como está a rede agora |
+| `sentinel today` | Resumo do dia |
+| `sentinel history` | A internet por hora do dia nos últimos 7 dias (`--days 1-30`) |
+| `sentinel devices` | Todos os aparelhos já vistos, com MAC, inclusive os que saíram |
+| `sentinel name 192.168.0.13 "TV sala"` | Dá apelido a um aparelho (aceita IP ou MAC) |
+| `sentinel same 6e:ae:… ce:f3:…` | Junta os dois MACs de um celular que trocou de MAC |
+| `sentinel speedtest` | Mede download e upload agora |
+| `sentinel collect` | Uma rodada na mão (é o que o timer roda) |
 | `make uninstall-timer` | Desliga o vigia |
 
 | Onde fica | |
