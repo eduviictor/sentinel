@@ -1,0 +1,11 @@
+[Unit]
+Description=Mede a velocidade da internet a cada 3 horas
+
+[Timer]
+# Começa no segundo 0 e leva poucos segundos: acaba antes da varredura de aparelhos,
+# que roda no fim da rodada de cada minuto.
+OnCalendar=*-*-* 00/3:17:00
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=sentinel: mede download e upload da internet
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/dev/sentinel
+ExecStart=%h/Documents/dev/sentinel/.venv/bin/sentinel speedtest
+TimeoutStartSec=180

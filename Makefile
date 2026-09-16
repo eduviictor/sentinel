@@ -28,13 +28,15 @@ install-timer:
 	@test -x .venv/bin/sentinel || { echo "rode make install antes" >&2; exit 1; }
 	mkdir -p ~/.config/systemd/user
 	cp infra/systemd/sentinel.service infra/systemd/sentinel.timer ~/.config/systemd/user/
+	cp infra/systemd/sentinel-speedtest.service infra/systemd/sentinel-speedtest.timer ~/.config/systemd/user/
 	systemctl --user daemon-reload
-	systemctl --user enable --now sentinel.timer
-	systemctl --user list-timers sentinel.timer --no-pager
+	systemctl --user enable --now sentinel.timer sentinel-speedtest.timer
+	systemctl --user list-timers 'sentinel*' --no-pager
 
 uninstall-timer:
-	-systemctl --user disable --now sentinel.timer
-	-systemctl --user stop sentinel.service
-	-systemctl --user reset-failed sentinel.service
+	-systemctl --user disable --now sentinel.timer sentinel-speedtest.timer
+	-systemctl --user stop sentinel.service sentinel-speedtest.service
+	-systemctl --user reset-failed sentinel.service sentinel-speedtest.service
 	rm -f ~/.config/systemd/user/sentinel.service ~/.config/systemd/user/sentinel.timer
+	rm -f ~/.config/systemd/user/sentinel-speedtest.service ~/.config/systemd/user/sentinel-speedtest.timer
 	systemctl --user daemon-reload
