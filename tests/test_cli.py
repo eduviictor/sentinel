@@ -344,3 +344,20 @@ def test_speedtest_steps_aside_when_another_is_running(tmp_path, monkeypatch, ca
     with round_lock(db.with_name("speedtest.lock")):
         assert main(["speedtest"]) == 0
     assert "outro teste de velocidade já está em andamento" in capsys.readouterr().err
+
+
+def test_a_single_speedtest_does_not_repeat_itself_as_the_slowest():
+    speed = SpeedSummary(
+        count=1,
+        failed=0,
+        avg_download_mbps=662.0,
+        slowest_download_mbps=662.0,
+        slowest_download_at=AT,
+        avg_upload_mbps=188.0,
+    )
+    [line] = [
+        line
+        for line in format_today(quiet_today(speed), tz=UTC).splitlines()
+        if line.startswith("Velocidade")
+    ]
+    assert line == "Velocidade: 1 teste · download médio 662 Mbps · upload médio 188 Mbps"

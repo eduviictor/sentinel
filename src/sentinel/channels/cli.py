@@ -89,7 +89,7 @@ def speed_today(summary: SpeedSummary, tz: tzinfo | None = None) -> str:
         return f"Velocidade: {summary.count} testes, todos falharam"
     tests = "1 teste" if summary.count == 1 else f"{summary.count} testes"
     line = f"Velocidade: {tests} · download médio {speed(summary.avg_download_mbps)}"
-    if summary.slowest_download_at is not None:
+    if summary.slowest_download_at is not None and summary.count - summary.failed > 1:
         line += (
             f" (menor {speed(summary.slowest_download_mbps)}"
             f" às {hhmm(summary.slowest_download_at, tz)})"
