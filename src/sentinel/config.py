@@ -22,6 +22,7 @@ class Config:
     subnet: IPv4Network
     internet_targets: tuple[str, ...]
     db_path: Path
+    plan_mbps: int | None = None
 
 
 def config_path() -> Path:
@@ -45,10 +46,16 @@ def load(path: Path | None = None) -> Config:
         gateway = IPv4Address(raw["gateway"])
         subnet = IPv4Network(raw["subnet"])
         targets = tuple(str(IPv4Address(target)) for target in raw["internet_targets"])
+        plan = raw.get("plan_mbps")
     except KeyError as exc:
         raise ConfigError(f"configuração inválida em {path}: falta o campo {exc.args[0]}") from exc
     except (tomllib.TOMLDecodeError, ValueError, TypeError) as exc:
         raise ConfigError(f"configuração inválida em {path}: {exc}") from exc
+    if plan is not None and (type(plan) is not int or plan <= 0):
+        raise ConfigError(
+            f"configuração inválida em {path}: plan_mbps deve ser a velocidade do plano,"
+            " um número inteiro de Mbps (ex.: plan_mbps = 700)"
+        )
     if not targets:
         raise ConfigError(f"configuração inválida em {path}: internet_targets está vazio")
     if subnet.prefixlen < LARGEST_SWEEP_PREFIX:
@@ -61,5 +68,9 @@ def load(path: Path | None = None) -> Config:
             f"configuração inválida em {path}: o roteador {gateway} está fora da rede {subnet}"
         )
     return Config(
-        gateway=str(gateway), subnet=subnet, internet_targets=targets, db_path=default_db_path()
+        gateway=str(gateway),
+        subnet=subnet,
+        internet_targets=targets,
+        db_path=default_db_path(),
+        plan_mbps=plan,
     )

@@ -57,3 +57,53 @@ def test_summary_of_nothing_is_empty():
     assert summary.count == 0
     assert summary.avg_download_mbps is None
     assert summary.slowest_download_at is None
+
+
+class Notes:
+    def __init__(self):
+        self.sent = []
+
+    def notify(self, title, body):
+        self.sent.append((title, body))
+
+
+def run_with_downloads(clock, store, downloads, plan=700):
+    notes = Notes()
+    for down in downloads:
+        clock.advance(hours=3)
+        run_speedtest(
+            FakeTester(clock, (down, 150.0)), store, clock, notifier=notes, plan_mbps=plan
+        )
+    return notes.sent
+
+
+def test_two_slow_tests_in_a_row_warn_once(clock, store):
+    sent = run_with_downloads(clock, store, [650.0, 300.0, 310.0, 290.0])
+    assert sent == [
+        (
+            "Internet lenta",
+            "Download de 310 Mbps e 300 Mbps nos 2 últimos testes, abaixo da metade dos 700 Mbps do plano",
+        )
+    ]
+
+
+def test_one_slow_test_alone_does_not_warn(clock, store):
+    assert run_with_downloads(clock, store, [650.0, 300.0, 640.0]) == []
+
+
+def test_recovering_after_a_slow_stretch_is_said_once(clock, store):
+    sent = run_with_downloads(clock, store, [300.0, 310.0, 650.0, 660.0])
+    assert sent[-1] == (
+        "Velocidade normal de novo",
+        "Download voltou a 650 Mbps (plano de 700 Mbps)",
+    )
+    assert len(sent) == 2
+
+
+def test_failed_tests_neither_warn_nor_break_the_streak(clock, store):
+    sent = run_with_downloads(clock, store, [300.0, None, 310.0])
+    assert [title for title, _ in sent] == ["Internet lenta"]
+
+
+def test_without_a_plan_nothing_is_said(clock, store):
+    assert run_with_downloads(clock, store, [100.0, 100.0], plan=None) == []

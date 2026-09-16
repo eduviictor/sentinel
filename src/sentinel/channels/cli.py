@@ -253,7 +253,13 @@ def run_speed(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
         if not acquired:
             print("outro teste de velocidade já está em andamento", file=sys.stderr)
             return 0
-        test = run_speedtest(CloudflareSpeedTester(), store, utc_now)
+        test = run_speedtest(
+            CloudflareSpeedTester(),
+            store,
+            utc_now,
+            notifier=DesktopNotifier(),
+            plan_mbps=config.plan_mbps,
+        )
     if test.download_mbps is None and test.upload_mbps is None:
         print("o teste falhou: sem conexão com a Cloudflare?", file=sys.stderr)
         return 1

@@ -2,3 +2,6 @@
 gateway = "192.168.0.1"
 subnet = "192.168.0.0/24"
 internet_targets = ["1.1.1.1", "8.8.8.8"]
+# Velocidade do plano, em Mbps. Com ela, avisa quando o download ficar abaixo da
+# metade em 2 testes seguidos. Sem ela, não avisa.
+# plan_mbps = 700

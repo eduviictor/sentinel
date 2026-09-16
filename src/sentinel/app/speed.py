@@ -1,13 +1,17 @@
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from statistics import fmean
 
 from sentinel.core.models import Measurement, SpeedTest
-from sentinel.core.ports import SpeedTester, Store
+from sentinel.core.ports import Notifier, SpeedTester, Store
 
 log = logging.getLogger(__name__)
+
+SLOW_FRACTION = 0.5
+# Tests run every 3 h but the PC is often off; a week reaches back past the gaps.
+ALERT_LOOKBACK = timedelta(days=7)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +24,13 @@ class SpeedSummary:
     avg_upload_mbps: float | None = None
 
 
-def run_speedtest(tester: SpeedTester, store: Store, clock: Callable[[], datetime]) -> SpeedTest:
+def run_speedtest(
+    tester: SpeedTester,
+    store: Store,
+    clock: Callable[[], datetime],
+    notifier: Notifier | None = None,
+    plan_mbps: int | None = None,
+) -> SpeedTest:
     started = clock()
     download, upload = tester.measure()
     test = SpeedTest(
@@ -33,7 +43,25 @@ def run_speedtest(tester: SpeedTester, store: Store, clock: Callable[[], datetim
         "ok" if download is not None else "failed",
         "ok" if upload is not None else "failed",
     )
+    if notifier is not None and plan_mbps is not None:
+        warn_about_speed(store.speedtests_since(started - ALERT_LOOKBACK), notifier, plan_mbps)
     return test
+
+
+def warn_about_speed(tests: Sequence[SpeedTest], notifier: Notifier, plan_mbps: int) -> None:
+    downloads = [t.download_mbps for t in tests if t.download_mbps is not None]
+    slow = [down < plan_mbps * SLOW_FRACTION for down in downloads]
+    if slow[-2:] == [True, True] and (len(slow) < 3 or not slow[-3]):
+        notifier.notify(
+            "Internet lenta",
+            f"Download de {downloads[-1]:.0f} Mbps e {downloads[-2]:.0f} Mbps nos 2 últimos testes,"
+            f" abaixo da metade dos {plan_mbps} Mbps do plano",
+        )
+    elif slow[-3:] == [True, True, False]:
+        notifier.notify(
+            "Velocidade normal de novo",
+            f"Download voltou a {downloads[-1]:.0f} Mbps (plano de {plan_mbps} Mbps)",
+        )
 
 
 def summarize(tests: Sequence[SpeedTest]) -> SpeedSummary:

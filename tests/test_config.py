@@ -69,3 +69,14 @@ def test_a_missing_field_is_named_plainly(tmp_path):
     path = write(tmp_path, 'gateway = "192.168.0.1"\ninternet_targets = ["1.1.1.1"]')
     with pytest.raises(ConfigError, match="falta o campo subnet"):
         load(path)
+
+
+def test_the_plan_speed_is_optional(tmp_path):
+    assert load(write(tmp_path, EXAMPLE)).plan_mbps is None
+    assert load(write(tmp_path, EXAMPLE + "plan_mbps = 700\n")).plan_mbps == 700
+
+
+@pytest.mark.parametrize("value", ["0", "-5", '"700"', "7.5"])
+def test_a_plan_speed_must_be_a_positive_whole_number(tmp_path, value):
+    with pytest.raises(ConfigError, match="plan_mbps"):
+        load(write(tmp_path, EXAMPLE + f"plan_mbps = {value}\n"))
