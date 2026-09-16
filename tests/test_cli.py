@@ -2,10 +2,12 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from sentinel.app.report import Now, Today
+from sentinel.app.speed import SpeedSummary
 from sentinel.app.stats import Quality
+from sentinel.channels import cli
 from sentinel.channels.cli import format_now, format_today, main, round_lock
 from sentinel.config import EXAMPLE
-from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope
+from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
 from sentinel.storage.sqlite import SqliteStore
 
 AT = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
@@ -248,3 +250,97 @@ def test_collect_steps_aside_when_another_round_holds_the_lock(tmp_path, monkeyp
     with round_lock(db.with_name("collect.lock")):
         assert main(["collect"]) == 0
     assert "outra rodada já está em andamento" in capsys.readouterr().err
+
+
+def quiet_now(**overrides):
+    fields = {
+        "at": AT,
+        "internet": Quality(samples=0, loss=0.0),
+        "latest_internet_ms": None,
+        "latest_gateway_ms": None,
+        "open_outage": None,
+        "devices": [],
+    }
+    return Now(**(fields | overrides))
+
+
+def test_now_shows_the_last_speedtest_and_its_age():
+    test = SpeedTest(AT - timedelta(hours=1), AT - timedelta(minutes=59), 480.4, 95.2)
+    text = format_now(quiet_now(speedtest=test), tz=UTC)
+    assert "Velocidade: 480 Mbps download · 95 Mbps upload (teste há 1 h)" in text
+
+
+def test_now_says_when_there_is_no_speedtest_or_it_failed():
+    assert "Velocidade: nenhum teste ainda (roda a cada 3 h)" in format_now(quiet_now(), tz=UTC)
+    failed = SpeedTest(AT - timedelta(minutes=30), AT - timedelta(minutes=29), None, None)
+    assert "Velocidade: o último teste falhou (há 30 min)" in format_now(
+        quiet_now(speedtest=failed), tz=UTC
+    )
+
+
+def quiet_today(speed):
+    return Today(
+        at=AT,
+        since=AT.replace(hour=0, minute=0),
+        internet=Quality(samples=0, loss=0.0),
+        outages=[],
+        new_devices=[],
+        speed=speed,
+    )
+
+
+def test_today_summarises_the_speedtests():
+    speed = SpeedSummary(
+        count=4,
+        failed=1,
+        avg_download_mbps=470.0,
+        slowest_download_mbps=120.0,
+        slowest_download_at=AT.replace(hour=12, minute=17),
+        avg_upload_mbps=90.0,
+    )
+    text = format_today(quiet_today(speed), tz=UTC)
+    assert (
+        "Velocidade: 4 testes · download médio 470 Mbps (menor 120 Mbps às 12:17)"
+        " · upload médio 90 Mbps · 1 falhou"
+    ) in text
+
+
+def test_today_without_speedtests_says_so():
+    assert "Velocidade: nenhum teste hoje" in format_today(
+        quiet_today(SpeedSummary(count=0, failed=0)), tz=UTC
+    )
+    assert "Velocidade: 2 testes, todos falharam" in format_today(
+        quiet_today(SpeedSummary(count=2, failed=2)), tz=UTC
+    )
+
+
+class FakeTester:
+    def __init__(self, result):
+        self.result = result
+
+    def measure(self):
+        return self.result
+
+
+def test_main_speedtest_measures_stores_and_prints(tmp_path, monkeypatch, capsys):
+    db = configure(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((480.0, 95.0)))
+    assert main(["speedtest"]) == 0
+    assert "Download 480 Mbps · Upload 95 Mbps" in capsys.readouterr().out
+    with SqliteStore(db) as store:
+        assert store.last_speedtest().download_mbps == 480.0
+
+
+def test_main_speedtest_failure_exits_nonzero(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((None, None)))
+    assert main(["speedtest"]) == 1
+    assert "o teste falhou" in capsys.readouterr().err
+
+
+def test_speedtest_steps_aside_when_another_is_running(tmp_path, monkeypatch, capsys):
+    db = configure(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "CloudflareSpeedTester", lambda: FakeTester((480.0, 95.0)))
+    with round_lock(db.with_name("speedtest.lock")):
+        assert main(["speedtest"]) == 0
+    assert "outro teste de velocidade já está em andamento" in capsys.readouterr().err

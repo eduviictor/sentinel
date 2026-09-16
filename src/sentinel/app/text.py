@@ -21,3 +21,7 @@ def ms(value: float | None) -> str:
 
 def pct(value: float) -> str:
     return f"{value * 100:.1f}%".replace(".", ",")
+
+
+def speed(value: float | None) -> str:
+    return "—" if value is None else f"{value:.0f} Mbps"

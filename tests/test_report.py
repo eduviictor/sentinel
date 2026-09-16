@@ -4,7 +4,7 @@ import pytest
 from conftest import GATEWAY, INTERNET
 
 from sentinel.app.report import DeviceNotFoundError, name_device, now, today
-from sentinel.core.models import Measurement, ScannedDevice, Scope
+from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
 TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")
@@ -90,3 +90,29 @@ def test_the_initial_list_is_not_new_on_day_one(store):
     store.record_scan(datetime(2026, 9, 15, 18, 40, tzinfo=UTC), [TV, PHONE])
     result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
     assert [d.mac for d in result.new_devices] == [PHONE.mac]
+
+
+def speedtest(started, down=480.0, up=95.0):
+    return SpeedTest(started, started + timedelta(seconds=6), down, up)
+
+
+def test_now_shows_the_last_speedtest(store):
+    store.add_speedtest(speedtest(NOW - timedelta(hours=4), down=300.0))
+    store.add_speedtest(speedtest(NOW - timedelta(hours=1)))
+    assert now(store, GATEWAY, INTERNET, clock=lambda: NOW).speedtest.download_mbps == 480.0
+
+
+def test_pings_taken_during_a_speedtest_do_not_count_as_latency(store):
+    test_start = NOW - timedelta(minutes=2)
+    measure(store, test_start - timedelta(seconds=5), internet=20.0)
+    measure(store, test_start + timedelta(seconds=3), internet=900.0)
+    measure(store, test_start + timedelta(seconds=10), internet=22.0)
+    store.add_speedtest(speedtest(test_start))
+    assert now(store, GATEWAY, INTERNET, clock=lambda: NOW).internet.worst_ms == 22.0
+    assert today(store, INTERNET, clock=lambda: NOW, tz=UTC).internet.worst_ms == 22.0
+
+
+def test_today_lists_the_speedtests_of_the_day(store):
+    store.add_speedtest(speedtest(datetime(2026, 9, 14, 23, 0, tzinfo=UTC)))
+    store.add_speedtest(speedtest(datetime(2026, 9, 15, 3, 17, tzinfo=UTC)))
+    assert today(store, INTERNET, clock=lambda: NOW, tz=UTC).speed.count == 1

@@ -11,12 +11,14 @@ from pathlib import Path
 
 from sentinel.app.collect import Collector
 from sentinel.app.report import DeviceNotFoundError, Now, Today, name_device, now, today
-from sentinel.app.text import duration, hhmm, ms, pct
+from sentinel.app.speed import SpeedSummary, run_speedtest
+from sentinel.app.text import duration, hhmm, ms, pct, speed
 from sentinel.config import Config, ConfigError, load
-from sentinel.core.models import Device, Scope
+from sentinel.core.models import Device, Scope, SpeedTest
 from sentinel.discovery.arp import ArpScanner
 from sentinel.notify.desktop import DesktopNotifier
 from sentinel.probing.ping import PingProber
+from sentinel.speed.cloudflare import CloudflareSpeedTester
 from sentinel.storage.sqlite import SqliteStore
 
 SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
@@ -69,6 +71,35 @@ def age(at: datetime, now: datetime) -> str:
     return "agora" if delta < timedelta(minutes=1) else f"há {duration(delta)}"
 
 
+def speed_now(test: SpeedTest | None, at: datetime) -> str:
+    if test is None:
+        return "Velocidade: nenhum teste ainda (roda a cada 3 h)"
+    if test.download_mbps is None and test.upload_mbps is None:
+        return f"Velocidade: o último teste falhou ({age(test.started_at, at)})"
+    return (
+        f"Velocidade: {speed(test.download_mbps)} download · {speed(test.upload_mbps)} upload"
+        f" (teste {age(test.started_at, at)})"
+    )
+
+
+def speed_today(summary: SpeedSummary, tz: tzinfo | None = None) -> str:
+    if summary.count == 0:
+        return "Velocidade: nenhum teste hoje"
+    if summary.failed == summary.count:
+        return f"Velocidade: {summary.count} testes, todos falharam"
+    tests = "1 teste" if summary.count == 1 else f"{summary.count} testes"
+    line = f"Velocidade: {tests} · download médio {speed(summary.avg_download_mbps)}"
+    if summary.slowest_download_at is not None:
+        line += (
+            f" (menor {speed(summary.slowest_download_mbps)}"
+            f" às {hhmm(summary.slowest_download_at, tz)})"
+        )
+    line += f" · upload médio {speed(summary.avg_upload_mbps)}"
+    if summary.failed:
+        line += " · 1 falhou" if summary.failed == 1 else f" · {summary.failed} falharam"
+    return line
+
+
 def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None) -> str:
     lines = []
     if report.open_outage:
@@ -87,6 +118,7 @@ def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None
         lines.append(
             f"Últimos 5 min: perda {pct(report.internet.loss)}, jitter {jitter(report.internet.jitter_ms)}"
         )
+    lines.append(speed_now(report.speedtest, report.at))
     lines.append("")
     if not report.devices:
         lines.append("Aparelhos: nenhuma varredura ainda")
@@ -113,6 +145,7 @@ def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = 
             f"Latência média {ms(q.avg_ms)} · pior momento {worst}"
             f" · perda {pct(q.loss)} · jitter {jitter(q.jitter_ms)}"
         )
+    lines.append(speed_today(report.speed, tz))
     if not report.outages:
         lines.append("Quedas: nenhuma")
     else:
@@ -153,6 +186,19 @@ def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> in
     return 0
 
 
+def run_speed(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
+    with round_lock(config.db_path.with_name("speedtest.lock")) as acquired:
+        if not acquired:
+            print("outro teste de velocidade já está em andamento", file=sys.stderr)
+            return 0
+        test = run_speedtest(CloudflareSpeedTester(), store, utc_now)
+    if test.download_mbps is None and test.upload_mbps is None:
+        print("o teste falhou: sem conexão com a Cloudflare?", file=sys.stderr)
+        return 1
+    print(f"Download {speed(test.download_mbps)} · Upload {speed(test.upload_mbps)}")
+    return 0
+
+
 def run_now(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     report = now(store, config.gateway, config.internet_targets, clock=utc_now)
     print(format_now(report, gateway=config.gateway))
@@ -186,6 +232,9 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("today", help="resumo do dia").set_defaults(handler=run_today)
     commands.add_parser("collect", help="uma rodada de medição (usada pelo timer)").set_defaults(
         handler=run_collect
+    )
+    commands.add_parser("speedtest", help="mede download e upload (usado pelo timer)").set_defaults(
+        handler=run_speed
     )
     name = commands.add_parser("name", help="dá apelido a um aparelho")
     name.add_argument("device", help="IP ou MAC")

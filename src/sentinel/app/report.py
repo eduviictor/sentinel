@@ -1,12 +1,15 @@
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, tzinfo
 
+from sentinel.app.speed import SpeedSummary, outside_speedtests, summarize
 from sentinel.app.stats import Quality, best_rtt, quality
-from sentinel.core.models import Device, Outage
+from sentinel.core.models import Device, Outage, SpeedTest
 from sentinel.core.ports import Store
 
 RECENT = timedelta(minutes=5)
+# Long enough to catch a speedtest that started before the window and still overlaps it.
+SPEEDTEST_LOOKBACK = timedelta(minutes=10)
 
 
 class DeviceNotFoundError(Exception):
@@ -21,6 +24,7 @@ class Now:
     latest_gateway_ms: float | None
     open_outage: Outage | None
     devices: list[Device]
+    speedtest: SpeedTest | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,13 +34,17 @@ class Today:
     internet: Quality
     outages: list[Outage]
     new_devices: list[Device]
+    speed: SpeedSummary = field(default_factory=lambda: SpeedSummary(count=0, failed=0))
 
 
 def now(
     store: Store, gateway: str, internet_targets: Sequence[str], clock: Callable[[], datetime]
 ) -> Now:
     at = clock()
-    recent = store.measurements_since(at - RECENT)
+    recent = outside_speedtests(
+        store.measurements_since(at - RECENT),
+        store.speedtests_since(at - RECENT - SPEEDTEST_LOOKBACK),
+    )
     latest = recent[-1] if recent else None
     last_scan = store.last_scan_at()
     present = [d for d in store.devices() if last_scan is not None and d.last_seen >= last_scan]
@@ -47,6 +55,7 @@ def now(
         latest_gateway_ms=best_rtt(latest, [gateway]) if latest else None,
         open_outage=store.open_outage(),
         devices=present,
+        speedtest=store.last_speedtest(),
     )
 
 
@@ -60,12 +69,16 @@ def today(
     midnight = at.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     devices = store.devices()
     initial = min((d.first_seen for d in devices), default=None)
+    speedtests = store.speedtests_since(midnight - SPEEDTEST_LOOKBACK)
     return Today(
         at=at,
         since=midnight,
-        internet=quality(store.measurements_since(midnight), internet_targets),
+        internet=quality(
+            outside_speedtests(store.measurements_since(midnight), speedtests), internet_targets
+        ),
         outages=store.outages_since(midnight),
         new_devices=[d for d in devices if d.first_seen >= midnight and d.first_seen != initial],
+        speed=summarize([t for t in speedtests if t.started_at >= midnight]),
     )
 
 
