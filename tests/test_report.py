@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from conftest import GATEWAY, INTERNET
@@ -167,3 +167,28 @@ def test_same_device_needs_two_known_different_macs(store):
         merge_devices(store, TV.mac, "aa:aa:aa:00:00:99")
     with pytest.raises(SameDeviceError):
         merge_devices(store, TV.mac, TV.mac.upper())
+
+
+def test_a_past_day_covers_only_that_day(store):
+    measure(store, datetime(2026, 9, 13, 23, 59, tzinfo=UTC), internet=900.0)
+    measure(store, datetime(2026, 9, 14, 12, 0, tzinfo=UTC), internet=30.0)
+    measure(store, datetime(2026, 9, 15, 0, 0, 1, tzinfo=UTC), internet=800.0)
+    store.start_outage(datetime(2026, 9, 14, 14, 10, tzinfo=UTC), Scope.ISP)
+    store.end_outage(datetime(2026, 9, 14, 14, 13, tzinfo=UTC))
+    store.start_outage(datetime(2026, 9, 15, 9, 0, tzinfo=UTC), Scope.HOME)
+    store.end_outage(datetime(2026, 9, 15, 9, 5, tzinfo=UTC))
+    store.add_speedtest(speedtest(datetime(2026, 9, 14, 3, 17, tzinfo=UTC)))
+    store.add_speedtest(speedtest(datetime(2026, 9, 15, 3, 17, tzinfo=UTC)))
+    result = today(store, INTERNET, clock=lambda: NOW, tz=UTC, day=date(2026, 9, 14))
+    assert result.since == datetime(2026, 9, 14, tzinfo=UTC)
+    assert result.until == datetime(2026, 9, 15, tzinfo=UTC)
+    assert result.complete is True
+    assert result.internet.worst_ms == 30.0
+    assert [o.scope for o in result.outages] == [Scope.ISP]
+    assert result.speed.count == 1
+
+
+def test_today_is_not_complete_and_ends_now(store):
+    result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
+    assert result.until == NOW
+    assert result.complete is False

@@ -1,6 +1,6 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta, tzinfo
+from datetime import date, datetime, time, timedelta, tzinfo
 
 from sentinel.app.speed import SpeedSummary, outside_speedtests, summarize
 from sentinel.app.stats import Quality, best_rtt, quality
@@ -45,6 +45,8 @@ class Today:
     outages: list[Outage]
     new_devices: list[Device]
     speed: SpeedSummary = field(default_factory=lambda: SpeedSummary(count=0, failed=0))
+    until: datetime | None = None
+    complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,21 +83,31 @@ def today(
     internet_targets: Sequence[str],
     clock: Callable[[], datetime],
     tz: tzinfo | None = None,
+    day: date | None = None,
 ) -> Today:
     at = clock()
-    midnight = at.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    local_now = at.astimezone(tz)
+    day = day or local_now.date()
+    since = datetime.combine(day, time.min, tzinfo=local_now.tzinfo)
+    complete = day < local_now.date()
+    until = since + timedelta(days=1) if complete else at
+
+    def within(moment: datetime) -> bool:
+        return since <= moment < until
+
     devices = store.devices()
     initial = min((d.first_seen for d in devices), default=None)
-    speedtests = store.speedtests_since(midnight - SPEEDTEST_LOOKBACK)
+    speedtests = store.speedtests_since(since - SPEEDTEST_LOOKBACK)
+    measurements = [m for m in store.measurements_since(since) if m.at < until]
     return Today(
         at=at,
-        since=midnight,
-        internet=quality(
-            outside_speedtests(store.measurements_since(midnight), speedtests), internet_targets
-        ),
-        outages=store.outages_since(midnight),
-        new_devices=[d for d in devices if d.first_seen >= midnight and d.first_seen != initial],
-        speed=summarize([t for t in speedtests if t.started_at >= midnight]),
+        since=since,
+        internet=quality(outside_speedtests(measurements, speedtests), internet_targets),
+        outages=[o for o in store.outages_since(since) if o.started_at < until],
+        new_devices=[d for d in devices if within(d.first_seen) and d.first_seen != initial],
+        speed=summarize([t for t in speedtests if within(t.started_at)]),
+        until=until,
+        complete=complete,
     )
 
 

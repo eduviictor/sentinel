@@ -1,11 +1,12 @@
 import argparse
 import fcntl
 import logging
+import re
 import sys
 import time
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from datetime import UTC, datetime, timedelta, tzinfo
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from ipaddress import IPv4Address
 from pathlib import Path
 
@@ -39,6 +40,29 @@ SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+DAY = re.compile(r"^(\d{1,2})/(\d{1,2})(?:/(\d{4}))?$")
+
+
+def parse_day(text: str, today: date) -> date:
+    match = DAY.match(text.strip())
+    if not match:
+        raise ValueError(text)
+    day, month, year = match.groups()
+    parsed = date(int(year or today.year), int(month), int(day))
+    if year is None and parsed > today:
+        parsed = parsed.replace(year=today.year - 1)
+    return parsed
+
+
+def day_argument(text: str) -> date:
+    try:
+        return parse_day(text, date.today())
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"data inválida: {text} (use dia/mês, ex.: 14/09)"
+        ) from None
 
 
 @contextmanager
@@ -149,9 +173,12 @@ def format_now(report: Now, tz: tzinfo | None = None, gateway: str | None = None
 
 def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = None) -> str:
     q = report.internet
-    lines = [f"Hoje até {hhmm(report.at, tz)}"]
+    if report.complete:
+        lines = [f"Dia {ddmm(report.since, tz)}"]
+    else:
+        lines = [f"Hoje até {hhmm(report.at, tz)}"]
     if q.samples == 0:
-        lines.append("Sem medições hoje.")
+        lines.append("Sem medições nesse dia." if report.complete else "Sem medições hoje.")
     else:
         worst = f"{hhmm(q.worst_at, tz)} ({ms(q.worst_ms)})" if q.worst_at else "—"
         lines.append(
@@ -278,10 +305,10 @@ def run_now(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     return 0
 
 
-def run_today(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
-    print(
-        format_today(today(store, config.internet_targets, clock=utc_now), gateway=config.gateway)
-    )
+def run_today(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
+    day = date.today() - timedelta(days=1) if args.yesterday else args.day
+    report = today(store, config.internet_targets, clock=utc_now, day=day)
+    print(format_today(report, gateway=config.gateway))
     return 0
 
 
@@ -341,7 +368,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.set_defaults(handler=run_now)
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("now", help="como está a rede agora").set_defaults(handler=run_now)
-    commands.add_parser("today", help="resumo do dia").set_defaults(handler=run_today)
+    day = commands.add_parser("today", help="resumo do dia")
+    which = day.add_mutually_exclusive_group()
+    which.add_argument("--ontem", dest="yesterday", action="store_true", help="resumo de ontem")
+    which.add_argument("--data", dest="day", type=day_argument, help="dia/mês, ex.: 14/09")
+    day.set_defaults(handler=run_today)
     past = commands.add_parser("history", help="a internet por hora do dia, nos últimos dias")
     past.add_argument(
         "--days", type=int, default=7, choices=range(1, 31), metavar="1-30", help="padrão: 7"

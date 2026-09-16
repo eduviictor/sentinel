@@ -1,5 +1,7 @@
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+
+import pytest
 
 from sentinel.app.history import History, HourStats
 from sentinel.app.report import KnownDevices, Now, Today
@@ -12,6 +14,7 @@ from sentinel.channels.cli import (
     format_now,
     format_today,
     main,
+    parse_day,
     round_lock,
 )
 from sentinel.config import EXAMPLE
@@ -454,3 +457,38 @@ def test_main_history_accepts_days(tmp_path, monkeypatch, capsys):
     configure(tmp_path, monkeypatch)
     assert main(["history", "--days", "3"]) == 0
     assert "Sem medições nos últimos 3 dias." in capsys.readouterr().out
+
+
+def test_a_past_day_is_titled_with_its_date():
+    report = Today(
+        at=AT,
+        since=datetime(2026, 9, 14, tzinfo=UTC),
+        internet=Quality(samples=0, loss=0.0),
+        outages=[],
+        new_devices=[],
+        until=datetime(2026, 9, 15, tzinfo=UTC),
+        complete=True,
+    )
+    assert format_today(report, tz=UTC).splitlines()[:2] == ["Dia 14/09", "Sem medições nesse dia."]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("14/09", date(2026, 9, 14)), ("14/09/2025", date(2025, 9, 14)), ("20/09", date(2025, 9, 20))],
+)
+def test_a_day_is_read_as_day_and_month(text, expected):
+    assert parse_day(text, today=date(2026, 9, 16)) == expected
+
+
+@pytest.mark.parametrize("text", ["31/02", "2026-09-14", "ontem"])
+def test_a_bad_day_is_refused(text):
+    with pytest.raises(ValueError):
+        parse_day(text, today=date(2026, 9, 16))
+
+
+def test_main_today_accepts_yesterday_and_a_date(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    assert main(["today", "--ontem"]) == 0
+    assert capsys.readouterr().out.startswith("Dia ")
+    assert main(["today", "--data", "14/09"]) == 0
+    assert capsys.readouterr().out.startswith("Dia 14/09")
