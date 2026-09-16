@@ -173,3 +173,17 @@ def test_merging_does_not_overwrite_the_survivors_own_nickname(store):
     store.set_nickname("aa:aa:aa:00:00:02", "novo")
     store.merge_device("aa:aa:aa:00:00:01", "aa:aa:aa:00:00:02")
     assert [d.nickname for d in store.devices()] == ["novo"]
+
+
+def test_internet_samples_keep_the_fastest_target_or_none(store):
+    store.add_measurement(
+        Measurement(at=T0, rtt_ms={"192.168.0.1": 1.0, "1.1.1.1": 30.0, "8.8.8.8": 20.0})
+    )
+    store.add_measurement(
+        Measurement(
+            at=T0 + timedelta(seconds=5),
+            rtt_ms={"192.168.0.1": 1.0, "1.1.1.1": None, "8.8.8.8": None},
+        )
+    )
+    samples = store.internet_samples_since(T0, ("1.1.1.1", "8.8.8.8"))
+    assert samples == [(T0, 20.0), (T0 + timedelta(seconds=5), None)]

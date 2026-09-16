@@ -112,6 +112,17 @@ class SqliteStore:
         )
         return group_measurements(rows)
 
+    def internet_samples_since(
+        self, since: datetime, internet_targets: Sequence[str]
+    ) -> list[tuple[datetime, float | None]]:
+        placeholders = ", ".join("?" for _ in internet_targets)
+        rows = self._db.execute(
+            "SELECT at, MIN(rtt_ms) FROM probes"  # noqa: S608
+            f" WHERE at >= ? AND target IN ({placeholders}) GROUP BY at ORDER BY at",
+            (to_text(since), *internet_targets),
+        )
+        return [(from_text(at), rtt) for at, rtt in rows]
+
     def open_outage(self) -> Outage | None:
         row = self._db.execute(
             "SELECT started_at, scope FROM outages"

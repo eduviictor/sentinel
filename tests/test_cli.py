@@ -1,11 +1,19 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
+from sentinel.app.history import History, HourStats
 from sentinel.app.report import KnownDevices, Now, Today
 from sentinel.app.speed import SpeedSummary
 from sentinel.app.stats import Quality
 from sentinel.channels import cli
-from sentinel.channels.cli import format_devices, format_now, format_today, main, round_lock
+from sentinel.channels.cli import (
+    format_devices,
+    format_history,
+    format_now,
+    format_today,
+    main,
+    round_lock,
+)
 from sentinel.config import EXAMPLE
 from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
 from sentinel.storage.sqlite import SqliteStore
@@ -403,3 +411,46 @@ def test_main_same_merges_and_explains(tmp_path, monkeypatch, capsys):
     assert 'ce:f3:eb:c5:e7:2c ("Celular Bel") agora inclui 6e:ae:7e:85:2b:2e' in out
     assert main(["same", "ce:f3:eb:c5:e7:2c", "ce:f3:eb:c5:e7:2c"]) == 1
     assert main(["same", "ce:f3:eb:c5:e7:2c", "00:11:22:33:44:55"]) == 1
+
+
+def test_history_shows_one_row_per_hour_and_the_highlights():
+    evening = HourStats(
+        hour=21, samples=60, avg_ms=52.0, worst_ms=240.0, loss=0.012, avg_download_mbps=480.0
+    )
+    morning = HourStats(
+        hour=9, samples=60, avg_ms=19.0, worst_ms=40.0, loss=0.0, avg_download_mbps=None
+    )
+    text = format_history(
+        History(
+            days=7,
+            days_with_data=2,
+            hours=[morning, evening],
+            slowest_hour=evening,
+            lossiest_hour=evening,
+        )
+    )
+    lines = text.splitlines()
+    assert lines[0] == "Últimos 7 dias, por hora do dia (dados de 2 dias)"
+    assert "09h" in lines[2] and "19 ms" in lines[2] and "—" in lines[2]
+    assert "21h" in lines[3] and "480 Mbps" in lines[3] and "1,2%" in lines[3]
+    assert "Hora mais lenta: 21h (média 52 ms)" in text
+    assert "Mais perda: 21h (1,2%)" in text
+
+
+def test_history_without_loss_or_data():
+    morning = HourStats(
+        hour=9, samples=60, avg_ms=19.0, worst_ms=40.0, loss=0.0, avg_download_mbps=None
+    )
+    text = format_history(
+        History(days=7, days_with_data=1, hours=[morning], slowest_hour=morning, lossiest_hour=None)
+    )
+    assert "Sem perda em nenhum horário." in text
+    assert format_history(
+        History(days=3, days_with_data=0, hours=[], slowest_hour=None, lossiest_hour=None)
+    ) == ("Sem medições nos últimos 3 dias.")
+
+
+def test_main_history_accepts_days(tmp_path, monkeypatch, capsys):
+    configure(tmp_path, monkeypatch)
+    assert main(["history", "--days", "3"]) == 0
+    assert "Sem medições nos últimos 3 dias." in capsys.readouterr().out

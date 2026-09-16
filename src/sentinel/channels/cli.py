@@ -10,6 +10,7 @@ from ipaddress import IPv4Address
 from pathlib import Path
 
 from sentinel.app.collect import Collector
+from sentinel.app.history import History, history
 from sentinel.app.report import (
     DeviceNotFoundError,
     KnownDevices,
@@ -204,6 +205,31 @@ def format_devices(
     return "\n".join(lines)
 
 
+def format_history(report: History) -> str:
+    if not report.hours:
+        return f"Sem medições nos últimos {report.days} dias."
+    days = "1 dia" if report.days_with_data == 1 else f"{report.days_with_data} dias"
+    lines = [
+        f"Últimos {report.days} dias, por hora do dia (dados de {days})",
+        f"  {'Hora':<6} {'Latência':<10} {'Pior':<10} {'Perda':<7} Download",
+    ]
+    for h in report.hours:
+        lines.append(
+            f"  {h.hour:02d}h    {ms(h.avg_ms):<10} {ms(h.worst_ms):<10} {pct(h.loss):<7}"
+            f" {speed(h.avg_download_mbps)}"
+        )
+    lines.append("")
+    if report.slowest_hour is not None:
+        slowest = report.slowest_hour
+        lines.append(f"Hora mais lenta: {slowest.hour:02d}h (média {ms(slowest.avg_ms)})")
+    if report.lossiest_hour is None:
+        lines.append("Sem perda em nenhum horário.")
+    else:
+        lossy = report.lossiest_hour
+        lines.append(f"Mais perda: {lossy.hour:02d}h ({pct(lossy.loss)})")
+    return "\n".join(lines)
+
+
 def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     with round_lock(config.db_path.with_name("collect.lock")) as acquired:
         if not acquired:
@@ -245,6 +271,11 @@ def run_today(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
     print(
         format_today(today(store, config.internet_targets, clock=utc_now), gateway=config.gateway)
     )
+    return 0
+
+
+def run_history(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
+    print(format_history(history(store, config.internet_targets, clock=utc_now, days=args.days)))
     return 0
 
 
@@ -290,6 +321,11 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("now", help="como está a rede agora").set_defaults(handler=run_now)
     commands.add_parser("today", help="resumo do dia").set_defaults(handler=run_today)
+    past = commands.add_parser("history", help="a internet por hora do dia, nos últimos dias")
+    past.add_argument(
+        "--days", type=int, default=7, choices=range(1, 31), metavar="1-30", help="padrão: 7"
+    )
+    past.set_defaults(handler=run_history)
     commands.add_parser("devices", help="todos os aparelhos já vistos").set_defaults(
         handler=run_devices
     )
