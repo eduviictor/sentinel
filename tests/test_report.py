@@ -3,7 +3,15 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from conftest import GATEWAY, INTERNET
 
-from sentinel.app.report import DeviceNotFoundError, known_devices, name_device, now, today
+from sentinel.app.report import (
+    DeviceNotFoundError,
+    SameDeviceError,
+    known_devices,
+    merge_devices,
+    name_device,
+    now,
+    today,
+)
 from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
@@ -138,3 +146,24 @@ def test_no_scan_yet_means_nobody_known(store):
     result = known_devices(store, clock=lambda: NOW)
     assert result.present == []
     assert result.away == []
+
+
+def test_same_device_keeps_the_most_recently_seen_whatever_the_order(store):
+    old = ScannedDevice(mac="6e:ae:7e:85:2b:2e", ip="192.168.0.3")
+    new = ScannedDevice(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3")
+    store.record_scan(NOW - timedelta(hours=13), [old])
+    store.set_nickname(old.mac, "Celular Bel")
+    store.record_scan(NOW, [new])
+    merged = merge_devices(store, "CE-F3-EB-C5-E7-2C", old.mac)
+    assert merged.survivor.mac == new.mac
+    assert merged.survivor.nickname == "Celular Bel"
+    assert merged.absorbed == old.mac
+    assert [d.mac for d in store.devices()] == [new.mac]
+
+
+def test_same_device_needs_two_known_different_macs(store):
+    store.record_scan(NOW, [TV])
+    with pytest.raises(DeviceNotFoundError):
+        merge_devices(store, TV.mac, "aa:aa:aa:00:00:99")
+    with pytest.raises(SameDeviceError):
+        merge_devices(store, TV.mac, TV.mac.upper())

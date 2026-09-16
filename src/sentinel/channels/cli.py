@@ -14,8 +14,10 @@ from sentinel.app.report import (
     DeviceNotFoundError,
     KnownDevices,
     Now,
+    SameDeviceError,
     Today,
     known_devices,
+    merge_devices,
     name_device,
     now,
     today,
@@ -264,6 +266,24 @@ def run_name(config: Config, store: SqliteStore, args: argparse.Namespace) -> in
     return 0
 
 
+def run_same(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
+    try:
+        merged = merge_devices(store, args.first, args.second)
+    except SameDeviceError:
+        print("os dois MACs são o mesmo aparelho", file=sys.stderr)
+        return 1
+    except DeviceNotFoundError as exc:
+        print(f"nenhum aparelho com MAC {exc}. Veja com sentinel devices.", file=sys.stderr)
+        return 1
+    survivor = merged.survivor
+    named = f' ("{survivor.nickname}")' if survivor.nickname else ""
+    print(
+        f"{survivor.mac}{named} agora inclui {merged.absorbed},"
+        f" visto desde {ddmm(survivor.first_seen)}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sentinel", description="Vigia da rede de casa.")
     parser.set_defaults(handler=run_now)
@@ -283,6 +303,12 @@ def build_parser() -> argparse.ArgumentParser:
     name.add_argument("device", help="IP ou MAC")
     name.add_argument("nickname", help="apelido, entre aspas se tiver espaço")
     name.set_defaults(handler=run_name)
+    same = commands.add_parser(
+        "same", help="junta dois MACs do mesmo aparelho (celular que trocou de MAC)"
+    )
+    same.add_argument("first", help="um MAC")
+    same.add_argument("second", help="o outro MAC")
+    same.set_defaults(handler=run_same)
     return parser
 
 

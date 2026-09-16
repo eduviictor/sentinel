@@ -16,6 +16,16 @@ class DeviceNotFoundError(Exception):
     pass
 
 
+class SameDeviceError(Exception):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class Merged:
+    survivor: Device
+    absorbed: str
+
+
 @dataclass(frozen=True, slots=True)
 class Now:
     at: datetime
@@ -101,8 +111,26 @@ def known_devices(store: Store, clock: Callable[[], datetime]) -> KnownDevices:
     )
 
 
+def normalized(ref: str) -> str:
+    return ref.strip().lower().replace("-", ":")
+
+
+def merge_devices(store: Store, first_mac: str, second_mac: str) -> Merged:
+    macs = {normalized(first_mac), normalized(second_mac)}
+    if len(macs) == 1:
+        raise SameDeviceError(first_mac)
+    found = {d.mac: d for d in store.devices() if d.mac in macs}
+    missing = macs - found.keys()
+    if missing:
+        raise DeviceNotFoundError(missing.pop())
+    absorbed, survivor = sorted(found.values(), key=lambda d: d.last_seen)
+    store.merge_device(absorbed.mac, survivor.mac)
+    merged = next(d for d in store.devices() if d.mac == survivor.mac)
+    return Merged(survivor=merged, absorbed=absorbed.mac)
+
+
 def name_device(store: Store, ref: str, nickname: str) -> Device:
-    wanted = ref.strip().lower().replace("-", ":")
+    wanted = normalized(ref)
     for device in sorted(store.devices(), key=lambda d: d.last_seen, reverse=True):
         if wanted in (device.mac, device.ip):
             store.set_nickname(device.mac, nickname)

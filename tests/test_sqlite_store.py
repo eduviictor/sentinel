@@ -141,3 +141,35 @@ def test_prune_keeps_speedtests(store):
     store.add_speedtest(speed(-60 * 24 * 40))
     store.prune(before=T0 - timedelta(days=30))
     assert store.last_speedtest() is not None
+
+
+def test_merging_keeps_the_oldest_first_seen_the_nickname_and_the_sightings(store, db_path):
+    old_mac, new_mac = "6e:ae:7e:85:2b:2e", "ce:f3:eb:c5:e7:2c"
+    store.record_scan(T0, [ScannedDevice(mac=old_mac, ip="192.168.0.3", vendor=None)])
+    store.set_nickname(old_mac, "Celular Bel")
+    later = T0 + timedelta(hours=13)
+    store.record_scan(
+        later, [ScannedDevice(mac=new_mac, ip="192.168.0.3", mdns_name="Android.local")]
+    )
+    store.merge_device(old_mac, new_mac)
+    [device] = store.devices()
+    assert device.mac == new_mac
+    assert device.first_seen == T0
+    assert device.last_seen == later
+    assert device.nickname == "Celular Bel"
+    assert device.mdns_name == "Android.local"
+    assert store.last_scan_at() == later
+    assert sqlite3.connect(db_path).execute(
+        "SELECT COUNT(*) FROM sightings WHERE mac = ?", (new_mac,)
+    ).fetchone() == (2,)
+
+
+def test_merging_does_not_overwrite_the_survivors_own_nickname(store):
+    store.record_scan(T0, [ScannedDevice(mac="aa:aa:aa:00:00:01", ip="192.168.0.3")])
+    store.set_nickname("aa:aa:aa:00:00:01", "antigo")
+    store.record_scan(
+        T0 + timedelta(hours=1), [ScannedDevice(mac="aa:aa:aa:00:00:02", ip="192.168.0.3")]
+    )
+    store.set_nickname("aa:aa:aa:00:00:02", "novo")
+    store.merge_device("aa:aa:aa:00:00:01", "aa:aa:aa:00:00:02")
+    assert [d.nickname for d in store.devices()] == ["novo"]

@@ -389,3 +389,17 @@ def test_devices_before_any_scan():
     assert (
         format_devices(KnownDevices(at=AT, present=[], away=[])) == "Nenhum aparelho visto ainda."
     )
+
+
+def test_main_same_merges_and_explains(tmp_path, monkeypatch, capsys):
+    with SqliteStore(configure(tmp_path, monkeypatch)) as store:
+        store.record_scan(
+            AT - timedelta(hours=13), [ScannedDevice(mac="6e:ae:7e:85:2b:2e", ip="192.168.0.3")]
+        )
+        store.set_nickname("6e:ae:7e:85:2b:2e", "Celular Bel")
+        store.record_scan(AT, [ScannedDevice(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3")])
+    assert main(["same", "6e:ae:7e:85:2b:2e", "ce:f3:eb:c5:e7:2c"]) == 0
+    out = capsys.readouterr().out
+    assert 'ce:f3:eb:c5:e7:2c ("Celular Bel") agora inclui 6e:ae:7e:85:2b:2e' in out
+    assert main(["same", "ce:f3:eb:c5:e7:2c", "ce:f3:eb:c5:e7:2c"]) == 1
+    assert main(["same", "ce:f3:eb:c5:e7:2c", "00:11:22:33:44:55"]) == 1

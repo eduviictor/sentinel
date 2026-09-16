@@ -189,6 +189,23 @@ class SqliteStore:
         with self._db:
             self._db.execute("UPDATE devices SET nickname = ? WHERE mac = ?", (nickname, mac))
 
+    def merge_device(self, absorbed_mac: str, survivor_mac: str) -> None:
+        with self._db:
+            self._db.execute(
+                "UPDATE devices SET"
+                " first_seen = MIN(devices.first_seen, old.first_seen),"
+                " nickname = COALESCE(devices.nickname, old.nickname),"
+                " vendor = COALESCE(devices.vendor, old.vendor),"
+                " mdns_name = COALESCE(devices.mdns_name, old.mdns_name)"
+                " FROM (SELECT * FROM devices WHERE mac = ?) AS old"
+                " WHERE devices.mac = ?",
+                (absorbed_mac, survivor_mac),
+            )
+            self._db.execute(
+                "UPDATE sightings SET mac = ? WHERE mac = ?", (survivor_mac, absorbed_mac)
+            )
+            self._db.execute("DELETE FROM devices WHERE mac = ?", (absorbed_mac,))
+
     def add_speedtest(self, test: SpeedTest) -> None:
         with self._db:
             self._db.execute(
