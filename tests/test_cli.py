@@ -230,6 +230,19 @@ def test_today_calls_the_router_router():
     assert "Aparelhos novos: 1 — Roteador, 192.168.0.1 às 21:30" in text
 
 
+def test_today_says_random_mac_instead_of_unknown():
+    phone = Device(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3", first_seen=AT, last_seen=AT)
+    report = Today(
+        at=AT,
+        since=AT.replace(hour=0, minute=0),
+        internet=Quality(samples=0, loss=0.0),
+        outages=[],
+        new_devices=[phone],
+    )
+    text = format_today(report, tz=UTC)
+    assert "Aparelhos novos: 1 — MAC aleatório (celular ou notebook), 192.168.0.3" in text
+
+
 def test_collect_steps_aside_when_another_round_holds_the_lock(tmp_path, monkeypatch, capsys):
     db = configure(tmp_path, monkeypatch)
     with round_lock(db.with_name("collect.lock")):

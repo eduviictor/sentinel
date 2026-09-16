@@ -51,6 +51,13 @@ def device_name(device: Device, gateway: str | None = None) -> str:
     return device.label
 
 
+def new_device_name(device: Device, gateway: str | None = None) -> str:
+    name = device_name(device, gateway)
+    if name == "desconhecido" and device.has_random_mac:
+        return "MAC aleatório (celular ou notebook)"
+    return name
+
+
 def device_origin(device: Device) -> str:
     if device.has_random_mac:
         return "MAC aleatório"
@@ -121,7 +128,7 @@ def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = 
         lines.append("Aparelhos novos: nenhum")
     else:
         parts = [
-            f"{device_name(d, gateway)}, {d.ip} às {hhmm(d.first_seen, tz)}"
+            f"{new_device_name(d, gateway)}, {d.ip} às {hhmm(d.first_seen, tz)}"
             for d in report.new_devices
         ]
         lines.append(f"Aparelhos novos: {len(parts)} — " + "; ".join(parts))
