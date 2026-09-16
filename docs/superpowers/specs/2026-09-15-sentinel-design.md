@@ -177,3 +177,8 @@ Sem rede real na suíte.
 ## Fora de escopo
 
 Tudo em `docs/roadmap.md`. Publicar o repositório no GitHub depende de ok explícito do Eduardo.
+
+## Depois do MVP
+
+- 2026-09-16: speedtest pela Cloudflare a cada 3 h, com timer próprio. Decisões e
+  consequências em `docs/adrs/0004-speedtest-pela-cloudflare.md`.

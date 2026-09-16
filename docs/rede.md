@@ -21,6 +21,10 @@
 - **Perda de pacotes:** a parte dos pings que não voltou. 2–3 % já trava chamada.
 - **Jitter:** o quanto a latência varia de uma medição para a outra. Latência
   estável em 20 ms é melhor que uma que pula entre 10 e 200 ms.
+- **Download e upload:** download é baixar (assistir vídeo, abrir site); upload é
+  enviar (mandar arquivo, a sua imagem numa chamada de vídeo).
+- **Mbps:** megabits por segundo, a unidade da velocidade. É a mesma que a
+  operadora usa no plano ("500 mega"). Um vídeo 4K precisa de ~25 Mbps.
 - **ARP:** como um aparelho descobre o MAC de um IP: pergunta para a rede toda
   "quem é o 192.168.0.5?" e o dono responde. O Linux guarda as respostas na
   tabela `/proc/net/arp`.
@@ -51,6 +55,16 @@ qualquer um dos dois responder; a latência da internet é a do mais rápido.
 Queda só é declarada depois de 3 medições seguidas sem resposta (15 s), e só
 termina depois de 3 respostas seguidas. Isso evita aviso piscando quando a
 conexão oscila.
+
+## Como o sentinel mede a velocidade
+
+A cada 3 horas (00:17, 03:17, 06:17…), baixa e envia dados de teste para a
+Cloudflare e mede quanto tempo levou. Começa com arquivos pequenos e vai
+aumentando até uma transferência durar pelo menos 1,5 s: numa conexão rápida, um
+arquivo pequeno termina antes de a conexão chegar à velocidade máxima.
+
+Durante esses poucos segundos a conexão fica cheia, e os pings da mesma hora
+demoram mais. Por isso eles não entram na latência de `now` e `today` (ADR-0004).
 
 ## Limites
 

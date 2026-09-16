@@ -5,9 +5,8 @@ fora. Nada aqui é compromisso de ordem.
 
 ## Internet
 
-- **Speedtest (download e upload), a cada 2–3 h.** Precisa escolher o serviço
-  (Ookla, Cloudflare ou LibreSpeed), que é serviço externo e decisão do Eduardo, e
-  cada teste consome centenas de MB de banda.
+- **Avisar quando a velocidade ficar abaixo do contratado.** Precisa saber o plano
+  (ex.: 500 Mbps) e decidir o limite (ex.: menos de 50% em 2 testes seguidos).
 - **Qualidade do Wi-Fi.** O PC é cabeado: mede a internet, não o Wi-Fi. Exige
   medir a partir de um aparelho sem fio.
 - **Horário de silêncio para notificações.** No MVP, a notificação sai a qualquer
