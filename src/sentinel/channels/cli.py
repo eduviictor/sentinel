@@ -4,7 +4,7 @@ import logging
 import re
 import sys
 import time
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from ipaddress import IPv4Address
@@ -27,6 +27,7 @@ from sentinel.app.report import (
 from sentinel.app.speed import SpeedSummary, run_speedtest
 from sentinel.app.status import Status, status
 from sentinel.app.text import ddmm, duration, hhmm, ms, pct, size, speed
+from sentinel.channels.guide import GUIDES, Parser
 from sentinel.config import Config, ConfigError, load, vendors_download_path
 from sentinel.core.models import Device, Scope, SpeedTest
 from sentinel.discovery.arp import ArpScanner
@@ -38,6 +39,8 @@ from sentinel.storage.sqlite import SqliteStore
 from sentinel.system.systemd import SystemdTimers
 
 SCOPE_TEXT = {Scope.HOME: "rede de casa", Scope.ISP: "operadora"}
+
+Handler = Callable[[Config, SqliteStore, argparse.Namespace], int]
 
 
 def utc_now() -> datetime:
@@ -433,50 +436,56 @@ def run_update_vendors(config: Config, store: SqliteStore, _: argparse.Namespace
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sentinel", description="Vigia da rede de casa.")
+    parser = Parser(prog="sentinel")
+    parser.guide = GUIDES["sentinel"]
     parser.set_defaults(handler=run_now)
     commands = parser.add_subparsers(dest="command")
-    commands.add_parser("now", help="como está a rede agora").set_defaults(handler=run_now)
-    day = commands.add_parser("today", help="resumo do dia")
-    which = day.add_mutually_exclusive_group()
-    which.add_argument("--ontem", dest="yesterday", action="store_true", help="resumo de ontem")
-    which.add_argument("--data", dest="day", type=day_argument, help="dia/mês, ex.: 14/09")
-    day.set_defaults(handler=run_today)
-    past = commands.add_parser("history", help="a internet por hora do dia, nos últimos dias")
-    past.add_argument(
-        "--days", type=int, default=7, choices=range(1, 31), metavar="1-30", help="padrão: 7"
+
+    def command(name: str, handler: Handler) -> argparse.ArgumentParser:
+        sub = commands.add_parser(name)
+        sub.guide = GUIDES[name]
+        sub.set_defaults(handler=handler)
+        return sub
+
+    command("now", run_now)
+    which = command("today", run_today).add_mutually_exclusive_group()
+    which.add_argument("--ontem", dest="yesterday", action="store_true")
+    which.add_argument("--data", dest="day", type=day_argument)
+    command("history", run_history).add_argument(
+        "--days", type=int, default=7, choices=range(1, 31), metavar="1-30"
     )
-    past.set_defaults(handler=run_history)
-    commands.add_parser("status", help="o sentinel está funcionando?").set_defaults(
-        handler=run_status
-    )
-    commands.add_parser("devices", help="todos os aparelhos já vistos").set_defaults(
-        handler=run_devices
-    )
-    commands.add_parser("collect", help="uma rodada de medição (usada pelo timer)").set_defaults(
-        handler=run_collect
-    )
-    commands.add_parser("speedtest", help="mede download e upload (usado pelo timer)").set_defaults(
-        handler=run_speed
-    )
-    name = commands.add_parser("name", help="dá apelido a um aparelho")
-    name.add_argument("device", help="IP ou MAC")
-    name.add_argument("nickname", help="apelido, entre aspas se tiver espaço")
-    name.set_defaults(handler=run_name)
-    same = commands.add_parser(
-        "same", help="junta dois MACs do mesmo aparelho (celular que trocou de MAC)"
-    )
-    same.add_argument("first", help="um MAC")
-    same.add_argument("second", help="o outro MAC")
-    same.set_defaults(handler=run_same)
-    commands.add_parser(
-        "update-vendors", help="baixa a lista de fabricantes atualizada do IEEE"
-    ).set_defaults(handler=run_update_vendors)
+    command("status", run_status)
+    command("devices", run_devices)
+    name = command("name", run_name)
+    name.add_argument("device", metavar="IP-OU-MAC")
+    name.add_argument("nickname", metavar="APELIDO")
+    same = command("same", run_same)
+    same.add_argument("first", metavar="MAC1")
+    same.add_argument("second", metavar="MAC2")
+    command("update-vendors", run_update_vendors)
+    command("speedtest", run_speed)
+    command("collect", run_collect)
+    helper = commands.add_parser("help")
+    helper.guide = GUIDES["sentinel"]
+    helper.add_argument("topic", nargs="?")
+    helper.set_defaults(handler=None)
     return parser
+
+
+def show_guide(topic: str | None) -> int:
+    if topic is None or topic in GUIDES:
+        print(GUIDES[topic or "sentinel"])
+        return 0
+    print(
+        f"sentinel: comando desconhecido: {topic}\nVeja a ajuda: sentinel --help", file=sys.stderr
+    )
+    return 2
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "help":
+        return show_guide(args.topic)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
         config = load()
