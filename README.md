@@ -8,6 +8,9 @@ sabe quem está conectado no Wi-Fi e avisa na área de trabalho quando algo muda
 ![Sem root](https://img.shields.io/badge/permiss%C3%A3o-sem%20root-6f42c1)
 ![Linux](https://img.shields.io/badge/roda%20em-Linux%20%2B%20systemd-FCC624?logo=linux&logoColor=black)
 
+> **Só roda em Linux com systemd** (lê `/proc/net/arp` e usa `notify-send`, `ip` e
+> `systemctl`). Suporte a macOS: [issue #1](https://github.com/eduviictor/sentinel/issues/1).
+
 ---
 
 ## O que ele faz
