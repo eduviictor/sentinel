@@ -42,6 +42,13 @@ def test_avahi_output_is_address_then_name():
     assert parse_avahi("") is None
 
 
+def test_only_local_names_count_as_mdns():
+    # com VPN ligada, o avahi cai no DNS da rede do trabalho e devolve nomes assim
+    assert parse_avahi("192.168.0.2\tip-192-168-0-2.ec2.internal\n") is None
+    assert parse_avahi("192.168.0.1\t_gateway\n") is None
+    assert parse_avahi("192.168.0.13\tLGwebOSTV.local\n") == "LGwebOSTV.local"
+
+
 def test_resolve_name_survives_a_missing_avahi(monkeypatch):
     def missing(*args, **kwargs):
         raise FileNotFoundError("avahi-resolve")

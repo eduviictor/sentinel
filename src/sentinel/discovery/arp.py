@@ -30,7 +30,11 @@ def parse_arp_table(text: str, subnet: IPv4Network) -> dict[str, str]:
 
 def parse_avahi(output: str) -> str | None:
     fields = output.split()
-    return fields[1] if len(fields) >= 2 else None
+    # Só nome .local vem do mDNS: com VPN, o avahi também consulta o DNS comum e
+    # devolve nomes da rede do trabalho para IPs de casa.
+    if len(fields) >= 2 and fields[1].endswith(".local"):
+        return fields[1]
+    return None
 
 
 def resolve_name(ip: str) -> str | None:
