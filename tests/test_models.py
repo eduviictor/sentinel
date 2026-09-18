@@ -10,12 +10,12 @@ SEEN = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
 @pytest.mark.parametrize(
     ("mac", "expected"),
     [
-        ("e6:7b:21:a5:94:4a", True),
-        ("6e:ae:7e:85:2b:2e", True),
-        ("d6:f5:65:7d:7d:df", True),
-        ("fe:db:52:5d:d9:64", True),
-        ("d8:44:89:83:53:f0", False),
-        ("0c:8e:29:01:54:ce", False),
+        ("e6:11:11:11:11:01", True),
+        ("6e:22:22:22:22:02", True),
+        ("d6:33:33:33:33:03", True),
+        ("fe:44:44:44:44:04", True),
+        ("d8:44:89:11:22:33", False),
+        ("0c:8e:29:44:55:66", False),
     ],
 )
 def test_locally_administered_mac_is_random(mac, expected):
@@ -24,7 +24,7 @@ def test_locally_administered_mac_is_random(mac, expected):
 
 def device(**overrides):
     fields = {
-        "mac": "0c:8e:29:01:54:ce",
+        "mac": "0c:8e:29:44:55:66",
         "ip": "192.168.0.13",
         "first_seen": SEEN,
         "last_seen": SEEN,

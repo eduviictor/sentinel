@@ -7,9 +7,9 @@ from conftest import GATEWAY, INTERNET, START, FakeLink
 from sentinel.app.collect import Collector
 from sentinel.core.models import Measurement, ScannedDevice, Scope
 
-TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13", vendor="Arcadyan Corporation")
-ROUTER = ScannedDevice(mac="d8:44:89:83:53:f0", ip="192.168.0.1")
-PHONE = ScannedDevice(mac="e6:7b:21:a5:94:4a", ip="192.168.0.2")
+TV = ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13", vendor="Arcadyan Corporation")
+ROUTER = ScannedDevice(mac="d8:44:89:11:22:33", ip="192.168.0.1")
+PHONE = ScannedDevice(mac="e6:11:11:11:11:01", ip="192.168.0.2")
 
 
 @pytest.fixture

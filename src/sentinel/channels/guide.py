@@ -97,7 +97,7 @@ Uso:
 
 Exemplos:
   sentinel name 192.168.0.13 "TV sala"
-  sentinel name 0C-8E-29-01-54-CE "TV sala\"""",
+  sentinel name 0C-8E-29-44-55-66 "TV sala\"""",
     "same": """sentinel same — junta os 2 MACs do mesmo aparelho
 
 Celulares trocam de MAC às vezes e aparecem como aparelho novo. Este comando
@@ -109,7 +109,7 @@ Uso:
   sentinel same MAC1 MAC2
 
 Exemplo:
-  sentinel same 6e:ae:7e:85:2b:2e ce:f3:eb:c5:e7:2c""",
+  sentinel same 6e:22:22:22:22:02 ce:55:55:55:55:05""",
     "update-vendors": """sentinel update-vendors — atualiza a lista de fabricantes
 
 Baixa do IEEE (quem registra os fabricantes) a lista que diz de quem é cada

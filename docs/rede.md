@@ -4,7 +4,7 @@
 
 - **IP:** o endereço de um aparelho dentro da rede, como `192.168.0.13`. O roteador
   distribui e pode mudar com o tempo.
-- **MAC:** a identificação da peça de rede do aparelho, como `0c:8e:29:01:54:ce`.
+- **MAC:** a identificação da peça de rede do aparelho, como `0c:8e:29:44:55:66`.
   Em tese não muda; é por ele que o `sentinel` reconhece um aparelho.
 - **MAC aleatório:** celulares e notebooks modernos inventam um MAC por rede Wi-Fi
   para não serem rastreados. Dá para reconhecer: o segundo caractere é `2`, `6`,

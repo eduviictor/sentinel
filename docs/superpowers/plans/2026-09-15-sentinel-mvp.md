@@ -69,12 +69,12 @@ SEEN = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
 @pytest.mark.parametrize(
     ("mac", "expected"),
     [
-        ("e6:7b:21:a5:94:4a", True),
-        ("6e:ae:7e:85:2b:2e", True),
-        ("d6:f5:65:7d:7d:df", True),
-        ("fe:db:52:5d:d9:64", True),
-        ("d8:44:89:83:53:f0", False),
-        ("0c:8e:29:01:54:ce", False),
+        ("e6:11:11:11:11:01", True),
+        ("6e:22:22:22:22:02", True),
+        ("d6:33:33:33:33:03", True),
+        ("fe:44:44:44:44:04", True),
+        ("d8:44:89:11:22:33", False),
+        ("0c:8e:29:44:55:66", False),
     ],
 )
 def test_locally_administered_mac_is_random(mac, expected):
@@ -83,7 +83,7 @@ def test_locally_administered_mac_is_random(mac, expected):
 
 def device(**overrides):
     fields = {
-        "mac": "0c:8e:29:01:54:ce",
+        "mac": "0c:8e:29:44:55:66",
         "ip": "192.168.0.13",
         "first_seen": SEEN,
         "last_seen": SEEN,
@@ -1205,9 +1205,9 @@ git commit -m "feat: probe latency with the system ping"
 ```
 IP address       HW type     Flags       HW address            Mask     Device
 192.168.0.250    0x1         0x0         00:00:00:00:00:00     *        enp37s0
-192.168.0.1      0x1         0x2         d8:44:89:83:53:f0     *        enp37s0
-192.168.0.2      0x1         0x2         e6:7b:21:a5:94:4a     *        enp37s0
-192.168.0.13     0x1         0x2         0C:8E:29:01:54:CE     *        enp37s0
+192.168.0.1      0x1         0x2         d8:44:89:11:22:33     *        enp37s0
+192.168.0.2      0x1         0x2         e6:11:11:11:11:01     *        enp37s0
+192.168.0.13     0x1         0x2         0C:8E:29:44:55:66     *        enp37s0
 172.19.0.2       0x1         0x2         02:42:ac:13:00:02     *        br-0986064db30b
 ```
 
@@ -1245,16 +1245,16 @@ HOME = IPv4Network("192.168.0.0/24")
 def test_arp_table_keeps_only_complete_entries_inside_the_home_network():
     table = parse_arp_table((FIXTURES / "proc_net_arp.txt").read_text(), HOME)
     assert table == {
-        "192.168.0.1": "d8:44:89:83:53:f0",
-        "192.168.0.2": "e6:7b:21:a5:94:4a",
-        "192.168.0.13": "0c:8e:29:01:54:ce",
+        "192.168.0.1": "d8:44:89:11:22:33",
+        "192.168.0.2": "e6:11:11:11:11:01",
+        "192.168.0.13": "0c:8e:29:44:55:66",
     }
 
 
 def test_vendor_comes_from_the_first_three_bytes():
     vendors = load_vendors(FIXTURES / "oui_sample.txt")
-    assert vendor_for("0c:8e:29:01:54:ce", vendors) == "Arcadyan Corporation"
-    assert vendor_for("d8:44:89:83:53:f0", vendors) is None
+    assert vendor_for("0c:8e:29:44:55:66", vendors) == "Arcadyan Corporation"
+    assert vendor_for("d8:44:89:11:22:33", vendors) is None
 
 
 def test_a_missing_oui_file_means_no_vendors(tmp_path):
@@ -1305,14 +1305,14 @@ def test_scan_sweeps_the_network_then_reads_names_and_vendors():
     assert len(prober.swept) == 254
     assert (
         ScannedDevice(
-            mac="0c:8e:29:01:54:ce",
+            mac="0c:8e:29:44:55:66",
             ip="192.168.0.13",
             vendor="Arcadyan Corporation",
             mdns_name="LGwebOSTV.local",
         )
         in found
     )
-    assert ScannedDevice(mac="d8:44:89:83:53:f0", ip="192.168.0.1") in found
+    assert ScannedDevice(mac="d8:44:89:11:22:33", ip="192.168.0.1") in found
     assert len(found) == 3
 ```
 
@@ -1647,9 +1647,9 @@ from conftest import GATEWAY, INTERNET, START
 from sentinel.app.collect import Collector
 from sentinel.core.models import Measurement, ScannedDevice, Scope
 
-TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13", vendor="Arcadyan Corporation")
-ROUTER = ScannedDevice(mac="d8:44:89:83:53:f0", ip="192.168.0.1")
-PHONE = ScannedDevice(mac="e6:7b:21:a5:94:4a", ip="192.168.0.2")
+TV = ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13", vendor="Arcadyan Corporation")
+ROUTER = ScannedDevice(mac="d8:44:89:11:22:33", ip="192.168.0.1")
+PHONE = ScannedDevice(mac="e6:11:11:11:11:01", ip="192.168.0.2")
 
 
 @pytest.fixture
@@ -1907,8 +1907,8 @@ from sentinel.app.report import DeviceNotFoundError, name_device, now, today
 from sentinel.core.models import Measurement, ScannedDevice, Scope
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
-TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")
-PHONE = ScannedDevice(mac="e6:7b:21:a5:94:4a", ip="192.168.0.2")
+TV = ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13")
+PHONE = ScannedDevice(mac="e6:11:11:11:11:01", ip="192.168.0.2")
 
 
 def measure(store, at, internet=20.0, gateway=1.0):
@@ -1963,7 +1963,7 @@ def test_today_lists_outages_and_new_devices_of_the_day(store):
 def test_a_device_is_named_by_ip_or_mac(store):
     store.record_scan(NOW, [TV])
     assert name_device(store, "192.168.0.13", "TV sala").nickname == "TV sala"
-    assert name_device(store, "0C:8E:29:01:54:CE", "TV da sala").nickname == "TV da sala"
+    assert name_device(store, "0C:8E:29:44:55:66", "TV da sala").nickname == "TV da sala"
     assert store.devices()[0].nickname == "TV da sala"
 
 
@@ -2106,7 +2106,7 @@ from sentinel.storage.sqlite import SqliteStore
 
 AT = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
 TV = Device(
-    mac="0c:8e:29:01:54:ce",
+    mac="0c:8e:29:44:55:66",
     ip="192.168.0.13",
     first_seen=AT,
     last_seen=AT - timedelta(minutes=3),
@@ -2115,7 +2115,7 @@ TV = Device(
     nickname="TV sala",
 )
 PHONE = Device(
-    mac="e6:7b:21:a5:94:4a", ip="192.168.0.2", first_seen=AT, last_seen=AT, mdns_name="iPhone.local"
+    mac="e6:11:11:11:11:01", ip="192.168.0.2", first_seen=AT, last_seen=AT, mdns_name="iPhone.local"
 )
 
 
@@ -2214,7 +2214,7 @@ def test_main_names_a_device(tmp_path, monkeypatch, capsys):
     (tmp_path / "cfg" / "sentinel").mkdir(parents=True)
     (tmp_path / "cfg" / "sentinel" / "config.toml").write_text(EXAMPLE)
     with SqliteStore(tmp_path / "data" / "sentinel" / "sentinel.db") as store:
-        store.record_scan(AT, [ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")])
+        store.record_scan(AT, [ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13")])
     assert main(["name", "192.168.0.13", "TV sala"]) == 0
     assert 'agora se chama "TV sala"' in capsys.readouterr().out
     assert main(["name", "192.168.0.99", "x"]) == 1
@@ -2564,7 +2564,7 @@ Depois de uma mudança em adaptador, rode uma rodada de verdade (leva ~50 s) e c
 
 - **IP:** o endereço de um aparelho dentro da rede, como `192.168.0.13`. O roteador
   distribui e pode mudar com o tempo.
-- **MAC:** a identificação da peça de rede do aparelho, como `0c:8e:29:01:54:ce`.
+- **MAC:** a identificação da peça de rede do aparelho, como `0c:8e:29:44:55:66`.
   Em tese não muda; é por ele que o `sentinel` reconhece um aparelho.
 - **MAC aleatório:** celulares e notebooks modernos inventam um MAC por rede Wi-Fi
   para não serem rastreados. Dá para reconhecer: o segundo caractere é `2`, `6`,
@@ -2768,5 +2768,3 @@ Depois de 2 min: `journalctl --user -u sentinel --since "-3 min" --no-pager`
 Expected: rodadas terminando sem erro; `uv run sentinel now` mostra medições recentes.
 
 - [ ] **Step 5: Atualizar a memória do projeto**
-
-Registrar em `~/.claude/projects/-home-eduviictor-Documents-dev/memory/jarvis-monitor-rede.md` que o MVP está implementado, se o timer foi instalado, e o que ficou pendente.

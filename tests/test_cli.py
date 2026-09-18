@@ -25,7 +25,7 @@ from sentinel.storage.sqlite import SqliteStore
 
 AT = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
 TV = Device(
-    mac="0c:8e:29:01:54:ce",
+    mac="0c:8e:29:44:55:66",
     ip="192.168.0.13",
     first_seen=AT,
     last_seen=AT - timedelta(minutes=3),
@@ -34,7 +34,7 @@ TV = Device(
     nickname="TV sala",
 )
 PHONE = Device(
-    mac="e6:7b:21:a5:94:4a", ip="192.168.0.2", first_seen=AT, last_seen=AT, mdns_name="iPhone.local"
+    mac="e6:11:11:11:11:01", ip="192.168.0.2", first_seen=AT, last_seen=AT, mdns_name="iPhone.local"
 )
 
 
@@ -100,7 +100,7 @@ def test_now_without_measurements_points_to_the_timer():
 
 def test_the_router_is_called_router_unless_nicknamed():
     router = Device(
-        mac="d8:44:89:83:53:f0", ip="192.168.0.1", first_seen=AT, last_seen=AT, mdns_name="_gateway"
+        mac="d8:44:89:11:22:33", ip="192.168.0.1", first_seen=AT, last_seen=AT, mdns_name="_gateway"
     )
     report = Now(
         at=AT,
@@ -186,7 +186,7 @@ def test_main_without_config_explains_and_fails(tmp_path, monkeypatch, capsys):
 
 def test_main_names_a_device(tmp_path, monkeypatch, capsys):
     with SqliteStore(configure(tmp_path, monkeypatch)) as store:
-        store.record_scan(AT, [ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")])
+        store.record_scan(AT, [ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13")])
     assert main(["name", "192.168.0.13", "TV sala"]) == 0
     assert 'agora se chama "TV sala"' in capsys.readouterr().out
     assert main(["name", "192.168.0.99", "x"]) == 1
@@ -221,7 +221,7 @@ def test_main_now_and_today_run_end_to_end(tmp_path, monkeypatch, capsys):
         store.add_measurement(
             Measurement(at=at, rtt_ms={"192.168.0.1": 1.0, "1.1.1.1": 20.0, "8.8.8.8": None})
         )
-        store.record_scan(at, [ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")])
+        store.record_scan(at, [ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13")])
     assert main(["now"]) == 0
     out = capsys.readouterr().out
     assert "Internet: OK — 20 ms até a operadora, 1 ms até o roteador" in out
@@ -232,7 +232,7 @@ def test_main_now_and_today_run_end_to_end(tmp_path, monkeypatch, capsys):
 
 def test_today_calls_the_router_router():
     router = Device(
-        mac="d8:44:89:83:53:f0", ip="192.168.0.1", first_seen=AT, last_seen=AT, mdns_name="_gateway"
+        mac="d8:44:89:11:22:33", ip="192.168.0.1", first_seen=AT, last_seen=AT, mdns_name="_gateway"
     )
     report = Today(
         at=AT,
@@ -246,7 +246,7 @@ def test_today_calls_the_router_router():
 
 
 def test_today_says_random_mac_instead_of_unknown():
-    phone = Device(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3", first_seen=AT, last_seen=AT)
+    phone = Device(mac="ce:55:55:55:55:05", ip="192.168.0.3", first_seen=AT, last_seen=AT)
     report = Today(
         at=AT,
         since=AT.replace(hour=0, minute=0),
@@ -385,7 +385,7 @@ def test_sentinel_alone_shows_now(tmp_path, monkeypatch, capsys):
 def test_devices_lists_who_is_here_and_who_left():
     away = replace(PHONE, last_seen=AT - timedelta(hours=13), mdns_name=None)
     router = Device(
-        mac="d8:44:89:83:53:f0", ip="192.168.0.1", first_seen=AT - timedelta(days=1), last_seen=AT
+        mac="d8:44:89:11:22:33", ip="192.168.0.1", first_seen=AT - timedelta(days=1), last_seen=AT
     )
     text = format_devices(
         KnownDevices(at=AT, present=[router], away=[away]), tz=UTC, gateway="192.168.0.1"
@@ -393,9 +393,9 @@ def test_devices_lists_who_is_here_and_who_left():
     lines = text.splitlines()
     assert lines[0] == "Na rede agora (1):"
     assert "192.168.0.1" in lines[1] and "Roteador" in lines[1]
-    assert "d8:44:89:83:53:f0" in lines[1] and "desde 14/09" in lines[1]
+    assert "d8:44:89:11:22:33" in lines[1] and "desde 14/09" in lines[1]
     assert lines[3] == "Fora da rede (1):"
-    assert "e6:7b:21:a5:94:4a" in lines[4] and "visto há 13 h" in lines[4]
+    assert "e6:11:11:11:11:01" in lines[4] and "visto há 13 h" in lines[4]
 
 
 def test_devices_before_any_scan():
@@ -407,15 +407,15 @@ def test_devices_before_any_scan():
 def test_main_same_merges_and_explains(tmp_path, monkeypatch, capsys):
     with SqliteStore(configure(tmp_path, monkeypatch)) as store:
         store.record_scan(
-            AT - timedelta(hours=13), [ScannedDevice(mac="6e:ae:7e:85:2b:2e", ip="192.168.0.3")]
+            AT - timedelta(hours=13), [ScannedDevice(mac="6e:22:22:22:22:02", ip="192.168.0.3")]
         )
-        store.set_nickname("6e:ae:7e:85:2b:2e", "Celular Bel")
-        store.record_scan(AT, [ScannedDevice(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3")])
-    assert main(["same", "6e:ae:7e:85:2b:2e", "ce:f3:eb:c5:e7:2c"]) == 0
+        store.set_nickname("6e:22:22:22:22:02", "Celular Bel")
+        store.record_scan(AT, [ScannedDevice(mac="ce:55:55:55:55:05", ip="192.168.0.3")])
+    assert main(["same", "6e:22:22:22:22:02", "ce:55:55:55:55:05"]) == 0
     out = capsys.readouterr().out
-    assert 'ce:f3:eb:c5:e7:2c ("Celular Bel") agora inclui 6e:ae:7e:85:2b:2e' in out
-    assert main(["same", "ce:f3:eb:c5:e7:2c", "ce:f3:eb:c5:e7:2c"]) == 1
-    assert main(["same", "ce:f3:eb:c5:e7:2c", "00:11:22:33:44:55"]) == 1
+    assert 'ce:55:55:55:55:05 ("Celular Bel") agora inclui 6e:22:22:22:22:02' in out
+    assert main(["same", "ce:55:55:55:55:05", "ce:55:55:55:55:05"]) == 1
+    assert main(["same", "ce:55:55:55:55:05", "00:11:22:33:44:55"]) == 1
 
 
 def test_history_shows_one_row_per_hour_and_the_highlights():

@@ -15,8 +15,8 @@ from sentinel.app.report import (
 from sentinel.core.models import LinkUsage, Measurement, ScannedDevice, Scope, SpeedTest
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
-TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")
-PHONE = ScannedDevice(mac="e6:7b:21:a5:94:4a", ip="192.168.0.2")
+TV = ScannedDevice(mac="0c:8e:29:44:55:66", ip="192.168.0.13")
+PHONE = ScannedDevice(mac="e6:11:11:11:11:01", ip="192.168.0.2")
 
 
 def measure(store, at, internet=20.0, gateway=1.0):
@@ -71,7 +71,7 @@ def test_today_lists_outages_and_new_devices_of_the_day(store):
 def test_a_device_is_named_by_ip_or_mac(store):
     store.record_scan(NOW, [TV])
     assert name_device(store, "192.168.0.13", "TV sala").nickname == "TV sala"
-    assert name_device(store, "0C:8E:29:01:54:CE", "TV da sala").nickname == "TV da sala"
+    assert name_device(store, "0C:8E:29:44:55:66", "TV da sala").nickname == "TV da sala"
     assert store.devices()[0].nickname == "TV da sala"
 
 
@@ -90,7 +90,7 @@ def test_naming_an_unknown_device_fails_clearly(store):
 
 def test_a_dashed_mac_is_accepted(store):
     store.record_scan(NOW, [TV])
-    assert name_device(store, "0C-8E-29-01-54-CE", "TV").mac == TV.mac
+    assert name_device(store, "0C-8E-29-44-55-66", "TV").mac == TV.mac
 
 
 def test_the_initial_list_is_not_new_on_day_one(store):
@@ -149,12 +149,12 @@ def test_no_scan_yet_means_nobody_known(store):
 
 
 def test_same_device_keeps_the_most_recently_seen_whatever_the_order(store):
-    old = ScannedDevice(mac="6e:ae:7e:85:2b:2e", ip="192.168.0.3")
-    new = ScannedDevice(mac="ce:f3:eb:c5:e7:2c", ip="192.168.0.3")
+    old = ScannedDevice(mac="6e:22:22:22:22:02", ip="192.168.0.3")
+    new = ScannedDevice(mac="ce:55:55:55:55:05", ip="192.168.0.3")
     store.record_scan(NOW - timedelta(hours=13), [old])
     store.set_nickname(old.mac, "Celular Bel")
     store.record_scan(NOW, [new])
-    merged = merge_devices(store, "CE-F3-EB-C5-E7-2C", old.mac)
+    merged = merge_devices(store, "CE-55-55-55-55-05", old.mac)
     assert merged.survivor.mac == new.mac
     assert merged.survivor.nickname == "Celular Bel"
     assert merged.absorbed == old.mac

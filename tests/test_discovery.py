@@ -21,16 +21,16 @@ HOME = IPv4Network("192.168.0.0/24")
 def test_arp_table_keeps_only_complete_entries_inside_the_home_network():
     table = parse_arp_table((FIXTURES / "proc_net_arp.txt").read_text(), HOME)
     assert table == {
-        "192.168.0.1": "d8:44:89:83:53:f0",
-        "192.168.0.2": "e6:7b:21:a5:94:4a",
-        "192.168.0.13": "0c:8e:29:01:54:ce",
+        "192.168.0.1": "d8:44:89:11:22:33",
+        "192.168.0.2": "e6:11:11:11:11:01",
+        "192.168.0.13": "0c:8e:29:44:55:66",
     }
 
 
 def test_vendor_comes_from_the_first_three_bytes():
     vendors = load_vendors(FIXTURES / "oui_sample.txt")
-    assert vendor_for("0c:8e:29:01:54:ce", vendors) == "Arcadyan Corporation"
-    assert vendor_for("d8:44:89:83:53:f0", vendors) is None
+    assert vendor_for("0c:8e:29:44:55:66", vendors) == "Arcadyan Corporation"
+    assert vendor_for("d8:44:89:11:22:33", vendors) is None
 
 
 def test_a_missing_oui_file_means_no_vendors(tmp_path):
@@ -88,14 +88,14 @@ def test_scan_sweeps_the_network_then_reads_names_and_vendors():
     assert len(prober.swept) == 254
     assert (
         ScannedDevice(
-            mac="0c:8e:29:01:54:ce",
+            mac="0c:8e:29:44:55:66",
             ip="192.168.0.13",
             vendor="Arcadyan Corporation",
             mdns_name="LGwebOSTV.local",
         )
         in found
     )
-    assert ScannedDevice(mac="d8:44:89:83:53:f0", ip="192.168.0.1") in found
+    assert ScannedDevice(mac="d8:44:89:11:22:33", ip="192.168.0.1") in found
     assert len(found) == 3
 
 
@@ -130,7 +130,7 @@ def test_downloaded_vendors_replace_the_file_and_are_counted(tmp_path):
     dest = tmp_path / "data" / "oui.txt"
     count = download_vendors(dest, open_url=FakeDownload(ieee_body(20_000)))
     assert count == 20_001
-    assert vendor_for("d8:44:89:83:53:f0", load_vendors(dest)) == "TP-Link Systems Inc"
+    assert vendor_for("d8:44:89:11:22:33", load_vendors(dest)) == "TP-Link Systems Inc"
 
 
 def test_a_broken_download_keeps_the_old_file(tmp_path):

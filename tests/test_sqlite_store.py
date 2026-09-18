@@ -144,7 +144,7 @@ def test_prune_keeps_speedtests(store):
 
 
 def test_merging_keeps_the_oldest_first_seen_the_nickname_and_the_sightings(store, db_path):
-    old_mac, new_mac = "6e:ae:7e:85:2b:2e", "ce:f3:eb:c5:e7:2c"
+    old_mac, new_mac = "6e:22:22:22:22:02", "ce:55:55:55:55:05"
     store.record_scan(T0, [ScannedDevice(mac=old_mac, ip="192.168.0.3", vendor=None)])
     store.set_nickname(old_mac, "Celular Bel")
     later = T0 + timedelta(hours=13)
