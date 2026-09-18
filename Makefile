@@ -29,8 +29,10 @@ install-timer:
 	@test -f ~/.config/sentinel/config.toml || { echo "crie ~/.config/sentinel/config.toml antes (veja o README)" >&2; exit 1; }
 	@test -x .venv/bin/sentinel || { echo "rode make install antes" >&2; exit 1; }
 	mkdir -p ~/.config/systemd/user
-	cp infra/systemd/sentinel.service infra/systemd/sentinel.timer ~/.config/systemd/user/
-	cp infra/systemd/sentinel-speedtest.service infra/systemd/sentinel-speedtest.timer ~/.config/systemd/user/
+	cp infra/systemd/*.timer ~/.config/systemd/user/
+	for unit in sentinel sentinel-speedtest; do \
+		sed 's#@REPO@#$(CURDIR)#' infra/systemd/$$unit.service > ~/.config/systemd/user/$$unit.service; \
+	done
 	systemctl --user daemon-reload
 	systemctl --user enable --now sentinel.timer sentinel-speedtest.timer
 	systemctl --user list-timers 'sentinel*' --no-pager
