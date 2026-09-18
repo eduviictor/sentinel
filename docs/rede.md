@@ -66,6 +66,15 @@ arquivo pequeno termina antes de a conexão chegar à velocidade máxima.
 Durante esses poucos segundos a conexão fica cheia, e os pings da mesma hora
 demoram mais. Por isso eles não entram na latência de `now` e `today` (ADR-0004).
 
+## E se o seu próprio PC estiver baixando algo?
+
+Quando o link enche, a latência sobe: os pacotes ficam na fila. Isso se chama
+bufferbloat, e faria o `sentinel` acusar "internet ruim" numa hora em que era o
+seu PC baixando. Para separar as duas coisas, ele mede a cada 5 s quanto a placa
+de rede recebeu e enviou. Medição feita com o link acima da metade do plano sai
+das estatísticas de latência, e o `today` diz quantas foram ignoradas. O
+`history` mostra, em cada hora, o pico que o seu PC usou.
+
 ## E se houver VPN ligada?
 
 Uma VPN costuma levar todo o tráfego de internet do PC para dentro dela. Se o

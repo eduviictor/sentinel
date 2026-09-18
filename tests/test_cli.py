@@ -604,3 +604,36 @@ def test_collect_and_speedtest_measure_through_the_home_interface(tmp_path, monk
     monkeypatch.setattr(cli, "CloudflareSpeedTester", tester)
     assert main(["speedtest"]) == 0
     assert seen == {"gateway": "192.168.0.1", "tester": {"interface": "enp37s0"}}
+
+
+def test_today_says_how_many_samples_the_pc_spoiled():
+    report = Today(
+        at=AT,
+        since=AT.replace(hour=0, minute=0),
+        internet=Quality(samples=100, loss=0.0, avg_ms=19.0),
+        outages=[],
+        new_devices=[],
+        busy_samples=12,
+    )
+    assert "12 medições ignoradas: o seu PC estava usando a internet" in format_today(
+        report, tz=UTC
+    )
+    quiet = replace(report, busy_samples=0)
+    assert "ignoradas" not in format_today(quiet, tz=UTC)
+
+
+def test_history_shows_the_peak_the_pc_used_in_each_hour():
+    hour = HourStats(
+        hour=9,
+        samples=60,
+        avg_ms=19.0,
+        worst_ms=40.0,
+        loss=0.0,
+        avg_download_mbps=None,
+        peak_down_mbps=512.0,
+    )
+    text = format_history(
+        History(days=7, days_with_data=1, hours=[hour], slowest_hour=hour, lossiest_hour=None)
+    )
+    assert "Seu PC" in text.splitlines()[1]
+    assert "512 Mbps" in text.splitlines()[2]

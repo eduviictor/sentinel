@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
 from statistics import fmean
 
+from sentinel.app.load import busy_moments, busy_threshold
 from sentinel.core.models import SpeedTest
 from sentinel.core.ports import Store
 
@@ -19,6 +20,7 @@ class HourStats:
     worst_ms: float | None
     loss: float
     avg_download_mbps: float | None
+    peak_down_mbps: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,13 +42,16 @@ def history(
     clock: Callable[[], datetime],
     days: int = 7,
     tz: tzinfo | None = None,
+    plan_mbps: int | None = None,
 ) -> History:
     since = clock() - timedelta(days=days)
     tests = store.speedtests_since(since)
+    usages = store.usage_since(since)
+    busy = busy_moments(usages, busy_threshold(plan_mbps))
     samples = [
         (at, rtt)
         for at, rtt in store.internet_samples_since(since, internet_targets)
-        if not during_speedtest(at, tests)
+        if not during_speedtest(at, tests) and at not in busy
     ]
     by_hour: dict[int, list[float | None]] = defaultdict(list)
     for at, rtt in samples:
@@ -55,7 +60,12 @@ def history(
     for test in tests:
         if test.download_mbps is not None:
             downloads[test.started_at.astimezone(tz).hour].append(test.download_mbps)
-    hours = [hour_stats(hour, by_hour[hour], downloads[hour]) for hour in sorted(by_hour)]
+    used: dict[int, list[float]] = defaultdict(list)
+    for usage in usages:
+        used[usage.at.astimezone(tz).hour].append(usage.down_mbps)
+    hours = [
+        hour_stats(hour, by_hour[hour], downloads[hour], used[hour]) for hour in sorted(by_hour)
+    ]
     enough = [h for h in hours if h.samples >= MIN_SAMPLES_FOR_HIGHLIGHT and h.avg_ms is not None]
     lossy = [h for h in enough if h.loss > 0]
     return History(
@@ -67,7 +77,9 @@ def history(
     )
 
 
-def hour_stats(hour: int, rtts: list[float | None], downloads: list[float]) -> HourStats:
+def hour_stats(
+    hour: int, rtts: list[float | None], downloads: list[float], used: list[float]
+) -> HourStats:
     answered = [rtt for rtt in rtts if rtt is not None]
     return HourStats(
         hour=hour,
@@ -76,4 +88,5 @@ def hour_stats(hour: int, rtts: list[float | None], downloads: list[float]) -> H
         worst_ms=max(answered, default=None),
         loss=1 - len(answered) / len(rtts),
         avg_download_mbps=fmean(downloads) if downloads else None,
+        peak_down_mbps=max(used) if used else None,
     )

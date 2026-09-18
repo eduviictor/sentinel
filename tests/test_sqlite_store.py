@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
+from sentinel.core.models import LinkUsage, Measurement, ScannedDevice, Scope, SpeedTest
 from sentinel.storage.sqlite import SqliteStore
 
 T0 = datetime(2026, 9, 15, 12, 0, tzinfo=UTC)
@@ -187,3 +187,16 @@ def test_internet_samples_keep_the_fastest_target_or_none(store):
     )
     samples = store.internet_samples_since(T0, ("1.1.1.1", "8.8.8.8"))
     assert samples == [(T0, 20.0), (T0 + timedelta(seconds=5), None)]
+
+
+def test_link_usage_is_stored_and_pruned(store):
+    store.add_link_usage(LinkUsage(at=T0, down_mbps=120.5, up_mbps=3.0))
+    store.add_link_usage(LinkUsage(at=T0 - timedelta(days=31), down_mbps=1.0, up_mbps=1.0))
+    assert store.usage_since(T0 - timedelta(days=40)) == [
+        LinkUsage(at=T0 - timedelta(days=31), down_mbps=1.0, up_mbps=1.0),
+        LinkUsage(at=T0, down_mbps=120.5, up_mbps=3.0),
+    ]
+    store.prune(before=T0 - timedelta(days=30))
+    assert store.usage_since(T0 - timedelta(days=40)) == [
+        LinkUsage(at=T0, down_mbps=120.5, up_mbps=3.0)
+    ]

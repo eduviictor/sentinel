@@ -2,6 +2,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, time, timedelta, tzinfo
 
+from sentinel.app.load import busy_moments, busy_threshold, idle_only
 from sentinel.app.speed import SpeedSummary, outside_speedtests, summarize
 from sentinel.app.stats import Quality, best_rtt, quality
 from sentinel.core.models import Device, Outage, SpeedTest
@@ -47,6 +48,7 @@ class Today:
     speed: SpeedSummary = field(default_factory=lambda: SpeedSummary(count=0, failed=0))
     until: datetime | None = None
     complete: bool = False
+    busy_samples: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,12 +59,20 @@ class KnownDevices:
 
 
 def now(
-    store: Store, gateway: str, internet_targets: Sequence[str], clock: Callable[[], datetime]
+    store: Store,
+    gateway: str,
+    internet_targets: Sequence[str],
+    clock: Callable[[], datetime],
+    plan_mbps: int | None = None,
 ) -> Now:
     at = clock()
-    recent = outside_speedtests(
-        store.measurements_since(at - RECENT),
-        store.speedtests_since(at - RECENT - SPEEDTEST_LOOKBACK),
+    busy = busy_moments(store.usage_since(at - RECENT), busy_threshold(plan_mbps))
+    recent = idle_only(
+        outside_speedtests(
+            store.measurements_since(at - RECENT),
+            store.speedtests_since(at - RECENT - SPEEDTEST_LOOKBACK),
+        ),
+        busy,
     )
     latest = recent[-1] if recent else None
     last_scan = store.last_scan_at()
@@ -84,6 +94,7 @@ def today(
     clock: Callable[[], datetime],
     tz: tzinfo | None = None,
     day: date | None = None,
+    plan_mbps: int | None = None,
 ) -> Today:
     at = clock()
     local_now = at.astimezone(tz)
@@ -99,15 +110,18 @@ def today(
     initial = min((d.first_seen for d in devices), default=None)
     speedtests = store.speedtests_since(since - SPEEDTEST_LOOKBACK)
     measurements = [m for m in store.measurements_since(since) if m.at < until]
+    busy = busy_moments(store.usage_since(since), busy_threshold(plan_mbps))
+    measured = idle_only(outside_speedtests(measurements, speedtests), busy)
     return Today(
         at=at,
         since=since,
-        internet=quality(outside_speedtests(measurements, speedtests), internet_targets),
+        internet=quality(measured, internet_targets),
         outages=[o for o in store.outages_since(since) if o.started_at < until],
         new_devices=[d for d in devices if within(d.first_seen) and d.first_seen != initial],
         speed=summarize([t for t in speedtests if within(t.started_at)]),
         until=until,
         complete=complete,
+        busy_samples=sum(1 for m in measurements if m.at in busy),
     )
 
 

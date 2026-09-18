@@ -54,6 +54,15 @@ fora. Nada aqui é compromisso de ordem.
   (`~/Documents/dev/grafana-local`) lendo o SQLite. Próximo foco combinado com o
   Eduardo. Hoje `sentinel history` mostra a mesma ideia em tabela.
 
+## Medição
+
+- **Calibrar o limite de "link cheio".** Hoje é metade do plano (350 Mbps aqui).
+  Em 18/09 uma baixa de ~10 Mbps de média já levou a latência de 18 ms para 92 ms,
+  então o limite pode estar alto demais. Rever com os dados de uso já gravados.
+- **Guardar o detalhe de cada tamanho do speedtest.** Em 16/09 um teste deu 656
+  Mbps de download e 1 Mbps de upload; sem o detalhe não dá para saber se foi
+  congestionamento ou falha da medição.
+
 ## Configuração
 
 - **Descobrir roteador e rede sozinho.** No MVP, vêm do `config.toml`.

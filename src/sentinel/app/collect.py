@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, tzinfo
 
 from sentinel.app.outages import CONFIRMATIONS, OutageEnded, OutageStarted, next_event
 from sentinel.app.text import duration, hhmm
-from sentinel.core.models import Measurement, ScannedDevice, Scope, is_random_mac
-from sentinel.core.ports import Notifier, Prober, Scanner, Store
+from sentinel.core.models import LinkUsage, Measurement, ScannedDevice, Scope, is_random_mac
+from sentinel.core.ports import Link, Notifier, Prober, Scanner, Store
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +37,11 @@ class Collector:
     clock: Callable[[], datetime]
     sleep: Callable[[float], None]
     tz: tzinfo | None = None
+    link: Link | None = None
 
     def run(self) -> None:
         start = self.clock()
+        previous: tuple[datetime, int, int] | None = None
         for tick in range(TICKS):
             due = start + tick * INTERVAL
             wait = (due - self.clock()).total_seconds()
@@ -51,7 +53,11 @@ class Collector:
             if self.clock() - due > INTERVAL:
                 log.info("clock jumped, ending the round early")
                 return
+            counters = self._read_counters()
             self._measure()
+            if previous is not None and counters is not None:
+                self._record_usage(previous, counters)
+            previous = counters
         if self._scan_due():
             self._scan()
         self.store.prune(before=self.clock() - RETENTION)
@@ -60,6 +66,26 @@ class Collector:
             log.warning("round took %.1f s, the next minute may be skipped", elapsed)
         else:
             log.info("round took %.1f s", elapsed)
+
+    def _read_counters(self) -> tuple[datetime, int, int] | None:
+        if self.link is None:
+            return None
+        counters = self.link.counters()
+        return (self.clock(), *counters) if counters else None
+
+    def _record_usage(
+        self, previous: tuple[datetime, int, int], now: tuple[datetime, int, int]
+    ) -> None:
+        seconds = (now[0] - previous[0]).total_seconds()
+        if seconds <= 0:
+            return
+        self.store.add_link_usage(
+            LinkUsage(
+                at=now[0],
+                down_mbps=(now[1] - previous[1]) * 8 / seconds / 1_000_000,
+                up_mbps=(now[2] - previous[2]) * 8 / seconds / 1_000_000,
+            )
+        )
 
     def _measure(self) -> None:
         targets = [self.gateway, *self.internet_targets]

@@ -4,7 +4,7 @@ import pytest
 from conftest import GATEWAY, INTERNET
 
 from sentinel.app.history import history
-from sentinel.core.models import Measurement, SpeedTest
+from sentinel.core.models import LinkUsage, Measurement, SpeedTest
 
 NOW = datetime(2026, 9, 16, 23, 0, tzinfo=UTC)
 
@@ -77,3 +77,14 @@ def test_nothing_measured(store):
     assert result.hours == []
     assert result.days_with_data == 0
     assert result.slowest_hour is None
+
+
+def test_each_hour_shows_how_much_the_pc_used_and_ignores_busy_samples(store):
+    fill(store, 18, 9, [20.0] * 30)
+    busy_at = datetime(2026, 9, 18, 9, 10, tzinfo=UTC)
+    measure(store, busy_at, 300.0)
+    store.add_link_usage(LinkUsage(at=busy_at, down_mbps=500.0, up_mbps=1.0))
+    store.add_link_usage(LinkUsage(at=busy_at + timedelta(seconds=5), down_mbps=100.0, up_mbps=1.0))
+    [morning] = history(store, INTERNET, clock=lambda: NOW, tz=UTC, plan_mbps=700).hours
+    assert morning.worst_ms == 20.0
+    assert morning.peak_down_mbps == pytest.approx(500.0)

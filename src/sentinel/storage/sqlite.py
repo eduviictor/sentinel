@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Self
 
-from sentinel.core.models import Device, Measurement, Outage, ScannedDevice, Scope, SpeedTest
+from sentinel.core.models import (
+    Device,
+    LinkUsage,
+    Measurement,
+    Outage,
+    ScannedDevice,
+    Scope,
+    SpeedTest,
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS probes (
@@ -47,6 +55,12 @@ CREATE TABLE IF NOT EXISTS speedtests (
     upload_mbps REAL
 );
 CREATE INDEX IF NOT EXISTS speedtests_started_at ON speedtests (started_at);
+CREATE TABLE IF NOT EXISTS link_usage (
+    at TEXT NOT NULL,
+    down_mbps REAL NOT NULL,
+    up_mbps REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS link_usage_at ON link_usage (at);
 """
 
 
@@ -245,6 +259,20 @@ class SqliteStore:
         ).fetchone()
         return to_speedtest(row) if row else None
 
+    def add_link_usage(self, usage: LinkUsage) -> None:
+        with self._db:
+            self._db.execute(
+                "INSERT INTO link_usage (at, down_mbps, up_mbps) VALUES (?, ?, ?)",
+                (to_text(usage.at), usage.down_mbps, usage.up_mbps),
+            )
+
+    def usage_since(self, since: datetime) -> list[LinkUsage]:
+        rows = self._db.execute(
+            "SELECT at, down_mbps, up_mbps FROM link_usage WHERE at >= ? ORDER BY at",
+            (to_text(since),),
+        )
+        return [LinkUsage(at=from_text(at), down_mbps=down, up_mbps=up) for at, down, up in rows]
+
     def prune(self, before: datetime) -> None:
         # Cut on a minute boundary so a minute is never summarised from half its pings.
         cutoff = to_text(before.replace(second=0, microsecond=0))
@@ -258,3 +286,4 @@ class SqliteStore:
             )
             self._db.execute("DELETE FROM probes WHERE at < ?", (cutoff,))
             self._db.execute("DELETE FROM sightings WHERE at < ?", (cutoff,))
+            self._db.execute("DELETE FROM link_usage WHERE at < ?", (cutoff,))

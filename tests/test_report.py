@@ -12,7 +12,7 @@ from sentinel.app.report import (
     now,
     today,
 )
-from sentinel.core.models import Measurement, ScannedDevice, Scope, SpeedTest
+from sentinel.core.models import LinkUsage, Measurement, ScannedDevice, Scope, SpeedTest
 
 NOW = datetime(2026, 9, 15, 21, 30, tzinfo=UTC)
 TV = ScannedDevice(mac="0c:8e:29:01:54:ce", ip="192.168.0.13")
@@ -192,3 +192,14 @@ def test_today_is_not_complete_and_ends_now(store):
     result = today(store, INTERNET, clock=lambda: NOW, tz=UTC)
     assert result.until == NOW
     assert result.complete is False
+
+
+def test_measurements_taken_while_the_pc_downloads_do_not_count(store):
+    measure(store, NOW - timedelta(seconds=15), internet=20.0)
+    measure(store, NOW - timedelta(seconds=10), internet=250.0)
+    store.add_link_usage(LinkUsage(at=NOW - timedelta(seconds=10), down_mbps=500.0, up_mbps=2.0))
+    result = now(store, GATEWAY, INTERNET, clock=lambda: NOW, plan_mbps=700)
+    assert result.internet.worst_ms == 20.0
+    day = today(store, INTERNET, clock=lambda: NOW, tz=UTC, plan_mbps=700)
+    assert day.internet.worst_ms == 20.0
+    assert day.busy_samples == 1

@@ -94,6 +94,8 @@ flowchart LR
 - **Queda só com confirmação.** Um ping perdido não é queda: são precisas 3 falhas
   seguidas (15 s) para avisar, e 3 respostas para dizer que voltou.
 - **Suspender o PC não vira queda.** O tempo suspenso fica como buraco no histórico.
+- **O seu download não vira "internet ruim".** O sentinel mede o quanto o próprio PC
+  está usando e tira da conta as medições feitas com o link cheio.
 - **Velocidade sem atrapalhar a latência.** Durante o speedtest a conexão fica cheia;
   os pings desses segundos não entram na latência
   ([ADR-0004](docs/adrs/0004-speedtest-pela-cloudflare.md)).
@@ -156,7 +158,7 @@ rodando: `sentinel status`.
 |---|---|
 | `sentinel` ou `sentinel now` | Como está a rede agora |
 | `sentinel today` | Resumo de hoje (`--ontem` ou `--data 14/09` para outro dia) |
-| `sentinel history` | A internet por hora do dia nos últimos 7 dias (`--days 1-30`) |
+| `sentinel history` | A internet por hora do dia nos últimos 7 dias, com o pico que o seu PC usou (`--days 1-30`) |
 | `sentinel devices` | Todos os aparelhos já vistos, com MAC, inclusive os que saíram |
 | `sentinel status` | O sentinel está funcionando? Timers, última medição, próximo speedtest |
 | `sentinel name 192.168.0.13 "TV sala"` | Dá apelido a um aparelho (aceita IP ou MAC) |

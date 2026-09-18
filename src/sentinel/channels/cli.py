@@ -36,6 +36,7 @@ from sentinel.notify.desktop import DesktopNotifier
 from sentinel.probing.ping import PingProber
 from sentinel.speed.cloudflare import CloudflareSpeedTester
 from sentinel.storage.sqlite import SqliteStore
+from sentinel.system.link import InterfaceCounters
 from sentinel.system.network import interface_towards
 from sentinel.system.systemd import SystemdTimers
 
@@ -192,6 +193,8 @@ def format_today(report: Today, tz: tzinfo | None = None, gateway: str | None = 
             f" · perda {pct(q.loss)} · jitter {jitter(q.jitter_ms)}"
         )
     lines.append(speed_today(report.speed, tz, past=report.complete))
+    if report.busy_samples:
+        lines.append(f"{report.busy_samples} medições ignoradas: o seu PC estava usando a internet")
     if not report.outages:
         lines.append("Quedas: nenhuma")
     else:
@@ -245,12 +248,12 @@ def format_history(report: History) -> str:
     days = "1 dia" if report.days_with_data == 1 else f"{report.days_with_data} dias"
     lines = [
         f"Últimos {report.days} dias, por hora do dia (dados de {days})",
-        f"  {'Hora':<6} {'Latência':<10} {'Pior':<10} {'Perda':<7} Download",
+        f"  {'Hora':<6} {'Latência':<10} {'Pior':<10} {'Perda':<7} {'Download':<10} Seu PC",
     ]
     for h in report.hours:
         lines.append(
             f"  {h.hour:02d}h    {ms(h.avg_ms):<10} {ms(h.worst_ms):<10} {pct(h.loss):<7}"
-            f" {speed(h.avg_download_mbps)}"
+            f" {speed(h.avg_download_mbps):<10} {speed(h.peak_down_mbps)}"
         )
     lines.append("")
     if report.slowest_hour is not None:
@@ -344,6 +347,7 @@ def run_collect(config: Config, store: SqliteStore, _: argparse.Namespace) -> in
             store=store,
             clock=utc_now,
             sleep=time.sleep,
+            link=InterfaceCounters(interface) if interface else None,
         ).run()
     return 0
 
@@ -368,20 +372,31 @@ def run_speed(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
 
 
 def run_now(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
-    report = now(store, config.gateway, config.internet_targets, clock=utc_now)
+    report = now(
+        store,
+        config.gateway,
+        config.internet_targets,
+        clock=utc_now,
+        plan_mbps=config.plan_mbps,
+    )
     print(format_now(report, gateway=config.gateway))
     return 0
 
 
 def run_today(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
     day = date.today() - timedelta(days=1) if args.yesterday else args.day
-    report = today(store, config.internet_targets, clock=utc_now, day=day)
+    report = today(
+        store, config.internet_targets, clock=utc_now, day=day, plan_mbps=config.plan_mbps
+    )
     print(format_today(report, gateway=config.gateway))
     return 0
 
 
 def run_history(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
-    print(format_history(history(store, config.internet_targets, clock=utc_now, days=args.days)))
+    report = history(
+        store, config.internet_targets, clock=utc_now, days=args.days, plan_mbps=config.plan_mbps
+    )
+    print(format_history(report))
     return 0
 
 

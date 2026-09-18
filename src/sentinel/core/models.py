@@ -24,6 +24,13 @@ class Outage:
 
 
 @dataclass(frozen=True, slots=True)
+class LinkUsage:
+    at: datetime
+    down_mbps: float
+    up_mbps: float
+
+
+@dataclass(frozen=True, slots=True)
 class SpeedTest:
     started_at: datetime
     ended_at: datetime

@@ -43,6 +43,18 @@ class FakeScanner:
         return list(self.present)
 
 
+class FakeLink:
+    def __init__(self, down_bytes_per_s: int = 0, up_bytes_per_s: int = 0) -> None:
+        self.down = down_bytes_per_s
+        self.up = up_bytes_per_s
+        self.reads = 0
+
+    def counters(self) -> tuple[int, int]:
+        self.reads += 1
+        elapsed = 5 * (self.reads - 1)
+        return self.down * elapsed, self.up * elapsed
+
+
 class FakeNotifier:
     def __init__(self) -> None:
         self.sent: list[tuple[str, str]] = []

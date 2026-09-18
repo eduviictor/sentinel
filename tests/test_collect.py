@@ -2,7 +2,7 @@ from dataclasses import replace
 from datetime import UTC, timedelta
 
 import pytest
-from conftest import GATEWAY, INTERNET, START
+from conftest import GATEWAY, INTERNET, START, FakeLink
 
 from sentinel.app.collect import Collector
 from sentinel.core.models import Measurement, ScannedDevice, Scope
@@ -206,3 +206,17 @@ def test_an_unknown_vendor_with_a_fixed_mac_is_said_plainly(collector, clock, sc
     clock.advance(minutes=5)
     collector.run()
     assert notifier.sent[-1] == ("Aparelho novo na rede", "fabricante desconhecido, 192.168.0.30")
+
+
+def test_each_tick_records_how_busy_the_link_was(collector, clock, store):
+    link = FakeLink(down_bytes_per_s=12_500_000, up_bytes_per_s=125_000)
+    replace(collector, link=link).run()
+    usage = store.usage_since(START)
+    assert [u.at for u in usage] == [START + timedelta(seconds=5 * n) for n in range(1, 10)]
+    assert usage[0].down_mbps == pytest.approx(100.0)
+    assert usage[0].up_mbps == pytest.approx(1.0)
+
+
+def test_without_a_link_nothing_is_recorded(collector, store):
+    collector.run()
+    assert store.usage_since(START) == []
