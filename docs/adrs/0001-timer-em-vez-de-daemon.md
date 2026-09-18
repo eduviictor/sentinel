@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O Eduardo quer o `sentinel` "rodando a todo momento": medição contínua, histórico
+O objetivo é o `sentinel` "rodando a todo momento": medição contínua, histórico
 sem buraco e aviso quando a internet cai. Quedas curtas (20 s) também importam.
 
 ## Decisão

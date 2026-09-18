@@ -51,8 +51,8 @@ fora. Nada aqui é compromisso de ordem.
 ## Visualização
 
 - **Gráficos:** página web própria ou o lab Grafana local
-  (`~/Documents/dev/grafana-local`) lendo o SQLite. Próximo foco combinado com o
-  Eduardo. Hoje `sentinel history` mostra a mesma ideia em tabela.
+  (`~/Documents/dev/grafana-local`) lendo o SQLite. É o próximo foco.
+  Hoje `sentinel history` mostra a mesma ideia em tabela.
 
 ## Medição
 
@@ -75,8 +75,8 @@ fora. Nada aqui é compromisso de ordem.
 ## Como levar para 24h
 
 Hoje o `sentinel` só mede com o PC ligado. Para medir o tempo todo, precisa de uma
-máquina ligada dentro da rede de casa. É infraestrutura nova, então a escolha é do
-Eduardo. Opções:
+máquina ligada dentro da rede de casa. É infraestrutura nova, então a escolha fica em
+aberto. Opções:
 
 - **Raspberry Pi** ou outro computador pequeno: baixo consumo; o mesmo timer do
   systemd funciona sem mudança.

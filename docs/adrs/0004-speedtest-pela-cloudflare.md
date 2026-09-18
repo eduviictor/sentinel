@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O Eduardo quer saber a velocidade de download e upload no dia a dia, além da
+O objetivo é saber a velocidade de download e upload no dia a dia, além da
 latência. Medir velocidade exige baixar e enviar dados de verdade para um serviço
 na internet, e isso gasta banda: não dá para fazer a cada minuto.
 

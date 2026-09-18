@@ -1,14 +1,14 @@
 # sentinel — design do MVP
 
 - **Status:** aprovado (2026-09-15)
-- **Origem:** conversa com o Eduardo na sessão do monitor de rede (antiga dev-0d)
+- **Origem:** conversa na sessão do monitor de rede (antiga dev-0d)
 
 ## Objetivo
 
 Vigiar a rede de casa: saber quem está conectado e como a internet se comporta
 no dia a dia, com histórico. Primeiro projeto nascido do `python-template`.
 
-O Eduardo não domina redes. Todo termo técnico que aparece em mensagem, doc ou
+Quem usa não precisa dominar redes. Todo termo técnico que aparece em mensagem, doc ou
 saída de comando vem explicado em linguagem simples (`docs/rede.md`).
 
 **Regra do projeto:** nada que ficou fora do MVP se perde. Cada item adiado está
@@ -42,7 +42,7 @@ fronteira real com outro processo ou com arquivo.
   - `Prober`: mede um ping para um destino.
   - `Scanner`: descobre os aparelhos presentes.
   - `Store`: guarda e consulta.
-  - `Notifier`: avisa o Eduardo.
+  - `Notifier`: avisa quem usa.
 
 ### `app/`
 
@@ -175,7 +175,7 @@ Sem rede real na suíte.
 
 ## Fora de escopo
 
-Tudo em `docs/roadmap.md`. Publicar o repositório no GitHub depende de ok explícito do Eduardo.
+Tudo em `docs/roadmap.md`.
 
 ## Depois do MVP
 

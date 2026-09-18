@@ -1,6 +1,6 @@
 # sentinel — contexto para o Claude Code
 
-O que é: vigia da rede de casa — quem está conectado e como a internet se comporta, com histórico e notificação. Todo termo de rede em texto para o Eduardo vem explicado (`docs/rede.md`). Nada fora do MVP se perde: vai para [`docs/roadmap.md`](docs/roadmap.md).
+O que é: vigia da rede de casa — quem está conectado e como a internet se comporta, com histórico e notificação. Todo termo de rede em texto para quem lê vem explicado (`docs/rede.md`). Nada fora do MVP se perde: vai para [`docs/roadmap.md`](docs/roadmap.md).
 
 Decisões: [`docs/adrs/`](docs/adrs/)
 

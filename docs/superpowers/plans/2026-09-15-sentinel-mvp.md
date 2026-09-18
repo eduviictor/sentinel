@@ -2628,7 +2628,7 @@ conexão oscila.
 
 ## Contexto
 
-O Eduardo quer o `sentinel` "rodando a todo momento": medição contínua, histórico
+O objetivo é o `sentinel` "rodando a todo momento": medição contínua, histórico
 sem buraco e aviso quando a internet cai. Quedas curtas (20 s) também importam.
 
 ## Decisão
@@ -2735,7 +2735,7 @@ git commit -m "docs: explain the network, the decisions and how to run"
 
 ### Task 13: Verificação de ponta a ponta (manual)
 
-Sem código novo. Registrar o resultado de cada passo na mensagem final ao Eduardo.
+Sem código novo. Registrar o resultado de cada passo na mensagem final.
 
 - [ ] **Step 1: Configurar**
 
@@ -2757,7 +2757,7 @@ Expected: "Internet: OK" com latências plausíveis (roteador < 5 ms) e a lista 
 Run: `uv run sentinel today`
 Expected: "Hoje até HH:MM" com latência média e "Quedas: nenhuma".
 
-- [ ] **Step 4: Instalar o timer — só com ok explícito do Eduardo**
+- [ ] **Step 4: Instalar o timer — só com ok explícito**
 
 Instalar mexe no systemd dele. Perguntar antes. Com o ok:
 
