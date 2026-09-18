@@ -50,8 +50,8 @@ fora. Nada aqui é compromisso de ordem.
 
 ## Visualização
 
-- **Gráficos:** página web própria ou o lab Grafana local
-  (`~/Documents/dev/grafana-local`) lendo o SQLite. É o próximo foco.
+- **Gráficos:** página web própria ou um Grafana local
+  lendo o SQLite. É o próximo foco.
   Hoje `sentinel history` mostra a mesma ideia em tabela.
 
 ## Medição

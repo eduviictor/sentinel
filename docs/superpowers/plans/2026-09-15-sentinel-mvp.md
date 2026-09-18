@@ -2442,10 +2442,10 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=%h/Documents/dev/sentinel
+WorkingDirectory=@REPO@
 # notify-send precisa do barramento da sessão; o serviço de usuário nem sempre o herda.
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
-ExecStart=%h/Documents/dev/sentinel/.venv/bin/sentinel collect
+ExecStart=@REPO@/.venv/bin/sentinel collect
 TimeoutStartSec=120
 ```
 

@@ -1,12 +1,11 @@
 # sentinel — design do MVP
 
 - **Status:** aprovado (2026-09-15)
-- **Origem:** conversa na sessão do monitor de rede (antiga dev-0d)
 
 ## Objetivo
 
 Vigiar a rede de casa: saber quem está conectado e como a internet se comporta
-no dia a dia, com histórico. Primeiro projeto nascido do `python-template`.
+no dia a dia, com histórico.
 
 Quem usa não precisa dominar redes. Todo termo técnico que aparece em mensagem, doc ou
 saída de comando vem explicado em linguagem simples (`docs/rede.md`).
