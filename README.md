@@ -1,4 +1,4 @@
-# 🛰️ sentinel
+<p align="center"><img src="docs/img/banner.svg" alt="sentinel" width="420"></p>
 
 **O vigia da rede de casa.** Mede a internet o tempo todo, testa a velocidade,
 sabe quem está conectado no Wi-Fi e avisa na área de trabalho quando algo muda.

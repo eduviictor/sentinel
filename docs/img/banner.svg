@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" width="420" height="100" role="img" aria-label="sentinel">
+  <rect width="420" height="100" rx="12" fill="#0d1117"/>
+  <text x="28" y="56" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="34" font-weight="700" fill="#3fb950">$ sentinel<tspan fill="#e6edf3">_</tspan></text>
+  <text x="30" y="80" font-family="system-ui,sans-serif" font-size="13" fill="#8b949e">O vigia da rede de casa</text>
+</svg>
