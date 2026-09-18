@@ -76,6 +76,11 @@ fora. Nada aqui é compromisso de ordem.
 - Decidir a sobreposição com o Home Assistant (item "Casa" do roadmap do Jarvis),
   que também detecta presença.
 
+## Plataformas
+
+- **Suporte a macOS.** Hoje só roda em Linux com systemd; o trabalho está nos
+  adaptadores. Detalhes e checklist na [issue #1](https://github.com/eduviictor/sentinel/issues/1).
+
 ## Como levar para 24h
 
 Hoje o `sentinel` só mede com o PC ligado. Para medir o tempo todo, precisa de uma
