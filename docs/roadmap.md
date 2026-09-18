@@ -32,7 +32,7 @@ fora. Nada aqui é compromisso de ordem.
   fingerprint de DHCP.
 - **Atualizar a lista de fabricantes sozinho.** Hoje é manual (`sentinel
   update-vendors`); a lista do IEEE muda pouco, uma vez por mês bastaria.
-- **Presença** (iPhone saiu ou chegou), indo para o resumo do dia do Jarvis.
+- **Presença** (iPhone saiu ou chegou), para um resumo do dia.
 - **Uso de banda por aparelho e bloqueio.** Só pela API ou SNMP do roteador; sem
   ser o gateway, o tráfego não passa pelo PC.
 - **Mostrar o próprio PC na lista.** A tabela ARP só guarda vizinhos; o PC
@@ -66,15 +66,6 @@ fora. Nada aqui é compromisso de ordem.
 ## Configuração
 
 - **Descobrir roteador e rede sozinho.** No MVP, vêm do `config.toml`.
-
-## Integração com o Jarvis
-
-- Capacidade `network.scan` no registro de capacidades.
-- Check de aparelho novo e de queda no vigia (`app/watch.py`).
-- Fato no cumprimento ("a TV caiu da rede ontem às 23h").
-- Apelido por botão no Telegram.
-- Decidir a sobreposição com o Home Assistant (item "Casa" do roadmap do Jarvis),
-  que também detecta presença.
 
 ## Plataformas
 

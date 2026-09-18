@@ -193,7 +193,7 @@ Sendo honesto sobre o que ele ainda não faz:
 - **O speedtest gasta banda:** até ~170 MB por teste, ~1,4 GB por dia. E usa os
   endereços de teste do site da Cloudflare, que não são uma API oficial.
 
-O que vem depois — gráficos, rodar 24 h, integração com o Jarvis — está
+O que vem depois — gráficos e rodar 24 h — está
 no [roadmap](docs/roadmap.md).
 
 ---

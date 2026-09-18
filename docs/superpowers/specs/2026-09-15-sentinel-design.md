@@ -6,8 +6,7 @@
 ## Objetivo
 
 Vigiar a rede de casa: saber quem está conectado e como a internet se comporta
-no dia a dia, com histórico. Primeiro projeto nascido do `python-template`. Vai
-ser integrado ao Jarvis mais tarde; até lá é um projeto sozinho.
+no dia a dia, com histórico. Primeiro projeto nascido do `python-template`.
 
 O Eduardo não domina redes. Todo termo técnico que aparece em mensagem, doc ou
 saída de comando vem explicado em linguagem simples (`docs/rede.md`).
@@ -65,7 +64,7 @@ fronteira real com outro processo ou com arquivo.
 ### Fora do código
 
 - `infra/systemd/sentinel.service` (`Type=oneshot`, `ExecStart` apontando para
-  `.venv/bin/sentinel collect` do checkout principal, como no Jarvis).
+  `.venv/bin/sentinel collect` do checkout principal).
 - `infra/systemd/sentinel.timer` (`OnCalendar=minutely`, `AccuracySec=1s`).
   Se uma rodada passar de um minuto, o systemd não inicia outra por cima.
 - `make install-timer` e `make uninstall-timer`.

@@ -21,7 +21,7 @@ dias exige abrir e juntar arquivos na mão.
 
 ## Consequências
 
-- O Jarvis e o Grafana podem ler o mesmo arquivo depois.
+- O Grafana pode ler o mesmo arquivo depois.
 - Sem tabela de estado: queda aberta, lista inicial e última varredura saem dos dados.
 - Cortar fora da fronteira de minuto resumiria um minuto pela metade e o `INSERT OR
   REPLACE` seguinte apagaria a primeira metade; por isso o corte arredonda para o minuto.
