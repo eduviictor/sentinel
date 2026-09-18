@@ -9,7 +9,7 @@ sabe quem está conectado no Wi-Fi e avisa na área de trabalho quando algo muda
 ![Linux](https://img.shields.io/badge/roda%20em-Linux%20%2B%20systemd-FCC624?logo=linux&logoColor=black)
 
 > **Só roda em Linux com systemd** (lê `/proc/net/arp` e usa `notify-send`, `ip` e
-> `systemctl`). Suporte a macOS: [issue #1](https://github.com/eduviictor/sentinel/issues/1).
+> `systemctl`).
 
 ---
 
