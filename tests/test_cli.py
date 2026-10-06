@@ -1,3 +1,4 @@
+import re
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -494,7 +495,7 @@ def test_a_day_is_read_as_day_and_month(text, expected):
 
 @pytest.mark.parametrize("text", ["31/02", "2026-09-14", "ontem"])
 def test_a_bad_day_is_refused(text):
-    with pytest.raises(ValueError, match=r"\S"):
+    with pytest.raises(ValueError, match=f"{re.escape(text)}|out of range"):
         parse_day(text, today=date(2026, 9, 16))
 
 
