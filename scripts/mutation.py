@@ -163,9 +163,9 @@ def run_command(args: list[str]) -> str:
     logger.info("running %s", args)
     completed = subprocess.run(args, capture_output=True, text=True, check=False)  # noqa: S603
     if completed.returncode != 0:
-        raise MutationError(
-            f"{' '.join(args)} failed ({completed.returncode}): {completed.stderr.strip()}"
-        )
+        # mutmut reports its failures on stdout, so both streams are needed to diagnose a CI run
+        output = "\n".join((completed.stdout + completed.stderr).strip().splitlines()[-30:])
+        raise MutationError(f"{' '.join(args)} failed ({completed.returncode}):\n{output}")
     return completed.stdout
 
 
