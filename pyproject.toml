@@ -8,7 +8,20 @@ dependencies = []
 sentinel = "sentinel.channels.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0", "ruff>=0.16", "pre-commit>=4.6"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.16",
+    "pre-commit>=4.6",
+    "mypy>=2.4.0",
+    "import-linter>=2.15",
+    "pytest-cov>=7.1.0",
+    "bandit>=1.9.4",
+    "vulture>=2.16",
+    "xenon>=0.9.3",
+    "pip-audit>=2.10.1",
+    "mutmut>=3.8.0",
+    "hypothesis>=6.168.5",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -19,6 +32,48 @@ packages = ["src/sentinel"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["--strict-markers"]
+pythonpath = ["scripts"]
+
+[tool.coverage.run]
+source = ["src", "scripts"]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.mypy]
+strict = true
+files = ["src", "tests", "scripts"]
+mypy_path = "scripts"
+
+[tool.importlinter]
+root_package = "sentinel"
+
+# Exhaustive: a new adapter folder (cli/, storage/...) must be added to the top layer.
+[[tool.importlinter.contracts]]
+name = "Ports and adapters"
+type = "layers"
+containers = ["sentinel"]
+layers = [
+    "channels",
+    "app | config | discovery | notify | probing | speed | storage | system",
+    "core",
+]
+exhaustive = true
+
+[tool.mutmut]
+source_paths = ["src/"]
+also_copy = ["scripts/"]
+
+[tool.vulture]
+paths = ["src", "scripts"]
+min_confidence = 80
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+# subprocess use is already gated by ruff S603/S607, where each call is reviewed with a noqa
+skips = ["B404", "B603"]
 
 [tool.ruff]
 line-length = 100
@@ -26,7 +81,10 @@ target-version = "py313"
 force-exclude = true
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "S", "N", "T20", "ERA", "RUF", "I", "UP"]
+select = [
+    "E", "F", "B", "S", "N", "T20", "ERA", "RUF", "I", "UP",
+    "ANN", "BLE", "DTZ", "SIM", "PT", "C4", "RET", "PTH", "LOG", "G",
+]
 ignore = [
     "E501",
     # typographic dashes and quotes are expected in Portuguese text
@@ -37,6 +95,28 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = ["S101"]
+# baseline: burn down. Legacy tests predate the ANN rules; annotate them and drop entries.
+"tests/conftest.py" = ["ANN"]
+"tests/test_cli.py" = ["ANN"]
+"tests/test_cloudflare.py" = ["ANN"]
+"tests/test_collect.py" = ["ANN"]
+"tests/test_config.py" = ["ANN"]
+"tests/test_discovery.py" = ["ANN"]
+"tests/test_guide.py" = ["ANN"]
+"tests/test_history.py" = ["ANN"]
+"tests/test_link.py" = ["ANN"]
+"tests/test_load.py" = ["ANN"]
+"tests/test_models.py" = ["ANN"]
+"tests/test_notifier.py" = ["ANN"]
+"tests/test_outages.py" = ["ANN"]
+"tests/test_ping.py" = ["ANN"]
+"tests/test_report.py" = ["ANN"]
+"tests/test_speed.py" = ["ANN"]
+"tests/test_sqlite_store.py" = ["ANN"]
+"tests/test_stats.py" = ["ANN"]
+"tests/test_status.py" = ["ANN"]
+"tests/test_systemd.py" = ["ANN"]
+"tests/test_text.py" = ["ANN"]
 # Adapters run fixed system binaries (ping, avahi-resolve, notify-send) with argument lists, never a shell.
 # S310: discovery only opens the fixed IEEE https:// URL.
 "src/sentinel/probing/*.py" = ["S603", "S607"]
@@ -46,3 +126,33 @@ ignore = [
 "src/sentinel/channels/cli.py" = ["T201"]
 # The speed test only opens fixed https:// constants, never a URL from input.
 "src/sentinel/speed/*.py" = ["S310"]
+
+[[tool.mypy.overrides]]
+# baseline: burn down. Existing tests predate the annotation rule; new tests must be typed.
+module = [
+    "conftest",
+    "test_cli",
+    "test_cloudflare",
+    "test_collect",
+    "test_config",
+    "test_discovery",
+    "test_guide",
+    "test_history",
+    "test_link",
+    "test_load",
+    "test_models",
+    "test_notifier",
+    "test_outages",
+    "test_ping",
+    "test_report",
+    "test_speed",
+    "test_sqlite_store",
+    "test_stats",
+    "test_status",
+    "test_systemd",
+    "test_text",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_calls = false

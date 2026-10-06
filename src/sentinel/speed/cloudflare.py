@@ -4,6 +4,8 @@ import socket
 import time
 import urllib.request
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ TIMEOUT_S = 15
 CHUNK = 64 * 1024
 HEADERS = {"User-Agent": "sentinel"}
 
+OpenUrl = Callable[..., AbstractContextManager[Any]]
 Transfer = Callable[[int], tuple[int, float]]
 
 
@@ -49,17 +52,17 @@ class BoundHTTPSHandler(urllib.request.HTTPSHandler):
     def https_open(self, request: urllib.request.Request) -> http.client.HTTPResponse:
         return self.do_open(self._connection, request)
 
-    def _connection(self, *args: object, **kwargs: object) -> http.client.HTTPSConnection:
-        connection = http.client.HTTPSConnection(*args, **kwargs)
+    def _connection(self, host: str, **kwargs: Any) -> http.client.HTTPSConnection:  # noqa: ANN401
+        connection = http.client.HTTPSConnection(host, **kwargs)
         # http.client dials through this attribute; replacing it keeps a VPN's default route
         # from carrying the test, so the home connection is what gets measured.
-        connection._create_connection = lambda address, timeout, source_address=None: (
-            bound_connection(self._interface, address, timeout)
+        connection._create_connection = (  # type: ignore[attr-defined]
+            lambda address, timeout, *_: bound_connection(self._interface, address, timeout)
         )
         return connection
 
 
-def opener_for(interface: str | None) -> Callable[..., object]:
+def opener_for(interface: str | None) -> OpenUrl:
     if interface is None:
         return urllib.request.urlopen
     return urllib.request.build_opener(BoundHTTPSHandler(interface)).open
@@ -72,7 +75,7 @@ def mbps(size: int, seconds: float) -> float:
 class CloudflareSpeedTester:
     def __init__(
         self,
-        open_url: Callable[..., object] | None = None,
+        open_url: OpenUrl | None = None,
         clock: Callable[[], float] = time.monotonic,
         interface: str | None = None,
     ) -> None:

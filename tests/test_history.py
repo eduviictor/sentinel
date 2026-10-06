@@ -32,6 +32,8 @@ def test_hours_are_summarised_across_days(store):
     assert evening.samples == 60
     assert evening.avg_ms == pytest.approx(52.0)
     assert evening.loss == pytest.approx(10 / 60)
+    assert result.slowest_hour is not None
+    assert result.lossiest_hour is not None
     assert result.slowest_hour.hour == 21
     assert result.lossiest_hour.hour == 21
 
@@ -64,6 +66,7 @@ def test_a_few_samples_do_not_make_the_slowest_hour(store):
     fill(store, 16, 9, [20.0] * 30)
     fill(store, 16, 3, [300.0] * 5)
     result = history(store, INTERNET, clock=lambda: NOW, tz=UTC)
+    assert result.slowest_hour is not None
     assert result.slowest_hour.hour == 9
 
 

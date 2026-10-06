@@ -96,7 +96,7 @@ class SqliteStore:
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc_info: object) -> None:
+    def __exit__(self, *_: object) -> None:
         self.close()
 
     def close(self) -> None:
@@ -132,7 +132,7 @@ class SqliteStore:
         placeholders = ", ".join("?" for _ in internet_targets)
         rows = self._db.execute(
             "SELECT at, MIN(rtt_ms) FROM probes"  # noqa: S608
-            f" WHERE at >= ? AND target IN ({placeholders}) GROUP BY at ORDER BY at",
+            f" WHERE at >= ? AND target IN ({placeholders}) GROUP BY at ORDER BY at",  # nosec B608
             (to_text(since), *internet_targets),
         )
         return [(from_text(at), rtt) for at, rtt in rows]

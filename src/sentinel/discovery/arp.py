@@ -39,7 +39,7 @@ def parse_avahi(output: str) -> str | None:
 
 def resolve_name(ip: str) -> str | None:
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B607
             ["avahi-resolve", "-a", ip],
             capture_output=True,
             text=True,

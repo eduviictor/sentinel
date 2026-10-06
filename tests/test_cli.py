@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 import pytest
 
@@ -265,8 +266,8 @@ def test_collect_steps_aside_when_another_round_holds_the_lock(tmp_path, monkeyp
     assert "outra rodada já está em andamento" in capsys.readouterr().err
 
 
-def quiet_now(**overrides):
-    fields = {
+def quiet_now(**overrides: Any):
+    fields: dict[str, Any] = {
         "at": AT,
         "internet": Quality(samples=0, loss=0.0),
         "latest_internet_ms": None,
@@ -341,7 +342,9 @@ def test_main_speedtest_measures_stores_and_prints(tmp_path, monkeypatch, capsys
     assert main(["speedtest"]) == 0
     assert "Download 480 Mbps · Upload 95 Mbps" in capsys.readouterr().out
     with SqliteStore(db) as store:
-        assert store.last_speedtest().download_mbps == 480.0
+        last = store.last_speedtest()
+        assert last is not None
+        assert last.download_mbps == 480.0
 
 
 def test_main_speedtest_failure_exits_nonzero(tmp_path, monkeypatch, capsys):
@@ -392,10 +395,13 @@ def test_devices_lists_who_is_here_and_who_left():
     )
     lines = text.splitlines()
     assert lines[0] == "Na rede agora (1):"
-    assert "192.168.0.1" in lines[1] and "Roteador" in lines[1]
-    assert "d8:44:89:11:22:33" in lines[1] and "desde 14/09" in lines[1]
+    assert "192.168.0.1" in lines[1]
+    assert "Roteador" in lines[1]
+    assert "d8:44:89:11:22:33" in lines[1]
+    assert "desde 14/09" in lines[1]
     assert lines[3] == "Fora da rede (1):"
-    assert "e6:11:11:11:11:01" in lines[4] and "visto há 13 h" in lines[4]
+    assert "e6:11:11:11:11:01" in lines[4]
+    assert "visto há 13 h" in lines[4]
 
 
 def test_devices_before_any_scan():
@@ -436,8 +442,12 @@ def test_history_shows_one_row_per_hour_and_the_highlights():
     )
     lines = text.splitlines()
     assert lines[0] == "Últimos 7 dias, por hora do dia (dados de 2 dias)"
-    assert "09h" in lines[2] and "19 ms" in lines[2] and "—" in lines[2]
-    assert "21h" in lines[3] and "480 Mbps" in lines[3] and "1,2%" in lines[3]
+    assert "09h" in lines[2]
+    assert "19 ms" in lines[2]
+    assert "—" in lines[2]
+    assert "21h" in lines[3]
+    assert "480 Mbps" in lines[3]
+    assert "1,2%" in lines[3]
     assert "Hora mais lenta: 21h (média 52 ms)" in text
     assert "Mais perda: 21h (1,2%)" in text
 
@@ -484,7 +494,7 @@ def test_a_day_is_read_as_day_and_month(text, expected):
 
 @pytest.mark.parametrize("text", ["31/02", "2026-09-14", "ontem"])
 def test_a_bad_day_is_refused(text):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"\S"):
         parse_day(text, today=date(2026, 9, 16))
 
 
@@ -509,8 +519,8 @@ def test_a_past_day_without_speedtests_does_not_say_today():
     assert "Velocidade: nenhum teste nesse dia" in format_today(report, tz=UTC)
 
 
-def running_status(**overrides):
-    fields = {
+def running_status(**overrides: Any):
+    fields: dict[str, Any] = {
         "at": AT,
         "collect_on": True,
         "speedtest_on": True,
@@ -592,7 +602,7 @@ def test_status_warns_when_the_home_interface_is_unknown():
 
 def test_collect_and_speedtest_measure_through_the_home_interface(tmp_path, monkeypatch):
     configure(tmp_path, monkeypatch)
-    seen = {}
+    seen: dict[str, Any] = {}
     monkeypatch.setattr(
         cli, "interface_towards", lambda gateway: seen.setdefault("gateway", gateway) and "enp37s0"
     )

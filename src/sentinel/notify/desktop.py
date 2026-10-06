@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 class DesktopNotifier:
     def notify(self, title: str, body: str) -> None:
         try:
-            subprocess.run(
+            subprocess.run(  # nosec B607
                 ["notify-send", "-a", "sentinel", "-i", "network-wired", "--", title, body],
                 check=True,
                 capture_output=True,

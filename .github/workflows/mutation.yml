@@ -1,0 +1,50 @@
+name: mutation
+
+# Full run over every function: slow, measures how well the tests pin down the rules. Only reports;
+# it never gates a branch. Branches run the cheap version (the mutation job in ci.yml).
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      min_score:
+        description: "Fail below this mutation score (0 only reports)"
+        required: false
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutmut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: run mutmut
+        run: uv run --locked mutmut run --max-children "$(nproc)"
+      - name: report
+        if: ${{ always() }}
+        env:
+          MIN_SCORE: ${{ inputs.min_score || '0' }}
+        run: |
+          uv run --locked python scripts/mutation.py report --min-score "$MIN_SCORE" \
+            > mutation-report.md || status=$?
+          cat mutation-report.md >> "$GITHUB_STEP_SUMMARY"
+          exit "${status:-0}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        if: ${{ always() }}
+        with:
+          name: mutation-report
+          path: mutation-report.md
+          if-no-files-found: ignore

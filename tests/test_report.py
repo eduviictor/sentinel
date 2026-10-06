@@ -45,7 +45,9 @@ def test_now_lists_only_devices_present_in_the_last_scan(store):
 
 def test_now_reports_an_open_outage(store):
     store.start_outage(NOW - timedelta(minutes=2), Scope.ISP)
-    assert now(store, GATEWAY, INTERNET, clock=lambda: NOW).open_outage.scope is Scope.ISP
+    outage = now(store, GATEWAY, INTERNET, clock=lambda: NOW).open_outage
+    assert outage is not None
+    assert outage.scope is Scope.ISP
 
 
 def test_today_starts_at_local_midnight(store):
@@ -107,7 +109,9 @@ def speedtest(started, down=480.0, up=95.0):
 def test_now_shows_the_last_speedtest(store):
     store.add_speedtest(speedtest(NOW - timedelta(hours=4), down=300.0))
     store.add_speedtest(speedtest(NOW - timedelta(hours=1)))
-    assert now(store, GATEWAY, INTERNET, clock=lambda: NOW).speedtest.download_mbps == 480.0
+    latest = now(store, GATEWAY, INTERNET, clock=lambda: NOW).speedtest
+    assert latest is not None
+    assert latest.download_mbps == 480.0
 
 
 def test_pings_taken_during_a_speedtest_do_not_count_as_latency(store):

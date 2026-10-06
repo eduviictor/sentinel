@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -22,8 +23,8 @@ def test_locally_administered_mac_is_random(mac, expected):
     assert is_random_mac(mac) is expected
 
 
-def device(**overrides):
-    fields = {
+def device(**overrides: Any):
+    fields: dict[str, Any] = {
         "mac": "0c:8e:29:44:55:66",
         "ip": "192.168.0.13",
         "first_seen": SEEN,

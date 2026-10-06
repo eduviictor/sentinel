@@ -153,6 +153,7 @@ def test_a_bound_connection_is_pinned_to_the_interface_before_connecting():
     sock = bound_connection(
         "enp37s0", ("speed.cloudflare.com", 443), timeout=15, socket_factory=factory
     )
+    assert isinstance(sock, FakeSocket)
     assert sock.options == [(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, b"enp37s0")]
     assert sock.connected_to == ("speed.cloudflare.com", 443)
     assert sock.timeout == 15
