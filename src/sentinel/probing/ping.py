@@ -23,7 +23,7 @@ class PingProber:
 
     def ping(self, target: str) -> float | None:
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B607
                 ["ping", "-n", "-c", "1", "-W", str(self._timeout_s), *self._through, target],
                 capture_output=True,
                 text=True,

@@ -1,5 +1,18 @@
 {
   "permissions": {
     "deny": ["Read(.env)", "Read(.env.*)", "Read(!.env.example)"]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-check.sh",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
   }
 }

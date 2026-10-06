@@ -1,4 +1,4 @@
-.PHONY: install lint check test install-timer uninstall-timer
+.PHONY: install lint fast check verify test install-timer uninstall-timer
 
 install:
 	uv sync
@@ -17,10 +17,21 @@ lint:
 	uv run ruff check --fix
 	uv run ruff format
 
-check:
+fast:
 	uv run ruff check
 	uv run ruff format --check
-	$(MAKE) test
+	uv run mypy
+	uv run lint-imports
+
+check: fast test
+
+verify: fast
+	uv run pytest -q --cov --cov-report=term
+	uv run bandit -q -c pyproject.toml -r src scripts
+	uv run pip-audit
+	uv run vulture
+	# baseline: burn down. Five modules were already above the complexity limit when xenon was added.
+	uv run xenon src scripts --max-absolute B --max-modules A --max-average A --exclude "src/sentinel/config.py,src/sentinel/channels/cli.py,src/sentinel/app/speed.py,src/sentinel/app/history.py,src/sentinel/app/report.py"
 
 test:
 	uv run pytest -q

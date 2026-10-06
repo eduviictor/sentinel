@@ -65,7 +65,7 @@ def parse_day(text: str, today: date) -> date:
 
 def day_argument(text: str) -> date:
     try:
-        return parse_day(text, date.today())
+        return parse_day(text, datetime.now().astimezone().date())
     except ValueError:
         raise argparse.ArgumentTypeError(
             f"data inválida: {text} (use dia/mês, ex.: 14/09)"
@@ -384,7 +384,7 @@ def run_now(config: Config, store: SqliteStore, _: argparse.Namespace) -> int:
 
 
 def run_today(config: Config, store: SqliteStore, args: argparse.Namespace) -> int:
-    day = date.today() - timedelta(days=1) if args.yesterday else args.day
+    day = datetime.now().astimezone().date() - timedelta(days=1) if args.yesterday else args.day
     report = today(
         store, config.internet_targets, clock=utc_now, day=day, plan_mbps=config.plan_mbps
     )
@@ -517,4 +517,5 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(exc, file=sys.stderr)
         return 2
     with SqliteStore(config.db_path) as store:
-        return args.handler(config, store, args)
+        code: int = args.handler(config, store, args)
+        return code

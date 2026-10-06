@@ -1,7 +1,9 @@
 import re
 import urllib.request
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from pathlib import Path
+from typing import Any
 
 OUI_FILE = Path("/usr/share/ieee-data/oui.txt")
 IEEE_URL = "https://standards-oui.ieee.org/oui/oui.txt"
@@ -37,7 +39,9 @@ def vendors_file(downloaded: Path, system: Path = OUI_FILE) -> Path:
     return downloaded if downloaded.is_file() else system
 
 
-def download_vendors(dest: Path, open_url: Callable[..., object] = urllib.request.urlopen) -> int:
+def download_vendors(
+    dest: Path, open_url: Callable[..., AbstractContextManager[Any]] = urllib.request.urlopen
+) -> int:
     request = urllib.request.Request(IEEE_URL, headers={"User-Agent": "sentinel"})
     try:
         with open_url(request, timeout=TIMEOUT_S) as response:

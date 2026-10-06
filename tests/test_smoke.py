@@ -1,5 +1,6 @@
 import sentinel
 
 
-def test_package_imports():
-    assert sentinel.__name__ == "sentinel"
+class TestPackage:
+    def test_should_import(self) -> None:
+        assert sentinel.__name__ == "sentinel"

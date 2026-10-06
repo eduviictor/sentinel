@@ -13,3 +13,10 @@ build/
 .worktrees/
 .claude/worktrees/
 .claude/settings.local.json
+.mypy_cache/
+.coverage
+coverage.xml
+mutants/
+quality-fragments/
+quality-report.md
+mutation-report.md

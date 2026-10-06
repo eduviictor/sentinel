@@ -72,7 +72,7 @@ def history(
         days=days,
         days_with_data=len({at.astimezone(tz).date() for at, _ in samples}),
         hours=hours,
-        slowest_hour=max(enough, key=lambda h: h.avg_ms, default=None),
+        slowest_hour=max(enough, key=lambda h: h.avg_ms or 0.0, default=None),
         lossiest_hour=max(lossy, key=lambda h: h.loss, default=None),
     )
 

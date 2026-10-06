@@ -25,9 +25,10 @@ repos:
         language: system
         types_or: [python, pyi, markdown]
 
-      - id: tests
-        name: make test
-        entry: make test
+      # The full suite runs in CI or on demand (make test), not on every commit.
+      - id: types-and-architecture
+        name: mypy and import-linter
+        entry: sh -c 'uv run mypy && uv run lint-imports'
         language: system
         pass_filenames: false
-        always_run: true
+        types_or: [python, pyi, toml]

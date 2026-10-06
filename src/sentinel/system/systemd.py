@@ -17,7 +17,7 @@ def parse_timers(text: str) -> dict[str, datetime | None]:
 class SystemdTimers:
     def active(self) -> dict[str, datetime | None]:
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B607
                 ["systemctl", "--user", "list-timers", "sentinel*", "--output=json"],
                 capture_output=True,
                 text=True,

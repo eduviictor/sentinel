@@ -43,7 +43,8 @@ def test_each_command_help_has_usage_and_an_example(capsys, command):
     code, out, _ = run(capsys, command, "--help")
     assert code == 0
     assert out == GUIDES[command] + "\n"
-    assert "Uso:" in out and "Exemplo" in out
+    assert "Uso:" in out
+    assert "Exemplo" in out
 
 
 def test_help_command_shows_the_same_guides(capsys):

@@ -70,11 +70,11 @@ def summarize(tests: Sequence[SpeedTest]) -> SpeedSummary:
     failed = sum(1 for t in tests if t.download_mbps is None and t.upload_mbps is None)
     if not downloads and not uploads:
         return SpeedSummary(count=len(tests), failed=failed)
-    slowest = min(downloads, key=lambda t: t.download_mbps) if downloads else None
+    slowest = min(downloads, key=lambda t: t.download_mbps or 0.0) if downloads else None
     return SpeedSummary(
         count=len(tests),
         failed=failed,
-        avg_download_mbps=fmean(t.download_mbps for t in downloads) if downloads else None,
+        avg_download_mbps=fmean(t.download_mbps or 0.0 for t in downloads) if downloads else None,
         slowest_download_mbps=slowest.download_mbps if slowest else None,
         slowest_download_at=slowest.started_at if slowest else None,
         avg_upload_mbps=fmean(uploads) if uploads else None,
