@@ -1,11 +1,13 @@
 name: ci
 
-# Runs on pull requests only: pushes before the PR and the merge to main add nothing the PR run
-# has not checked. Each check goes through scripts/quality_report.py, which keeps the tool's exit
-# code (the job is still the gate) and saves a fragment; the report job turns the fragments into
-# one table, in the job summary and as a comment on the PR.
+# Runs on pull requests only. A draft PR gets the cheap checks on every push; the deep job
+# (security, dead code, complexity, mutation) runs once the PR is ready for review, to save
+# Actions minutes. Each check goes through scripts/quality_report.py, which keeps the tool's
+# exit code (the job is still the gate) and saves a fragment; the report job turns the
+# fragments into one table, in the job summary and as a comment on the PR.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -21,7 +23,7 @@ env:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -41,6 +43,9 @@ jobs:
       - name: architecture
         if: ${{ !cancelled() }}
         run: $REPORT import-linter -- uv run --locked lint-imports
+      - name: tests and coverage
+        if: ${{ !cancelled() }}
+        run: $REPORT pytest -- uv run --locked pytest -q --cov --cov-report=term
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: ${{ !cancelled() }}
         with:
@@ -49,63 +54,12 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  tests:
+  # Mutation only touches the functions this PR changed. MUTATION_MIN_SCORE is a ratchet raised
+  # over time (repository variable). The full mutation run is manual, in mutation.yml.
+  deep:
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
-        with:
-          enable-cache: true
-      - run: uv sync --locked
-      - name: tests and coverage
-        run: $REPORT pytest -- uv run --locked pytest -q --cov --cov-report=term
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          name: quality-fragment-tests
-          path: quality-fragments/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  hygiene:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
-        with:
-          enable-cache: true
-      - run: uv sync --locked
-      - name: security
-        run: $REPORT bandit -- uv run --locked bandit -q -c pyproject.toml -r src scripts
-      - name: dependency vulnerabilities
-        if: ${{ !cancelled() }}
-        run: $REPORT pip-audit -- uv run --locked pip-audit
-      - name: dead code
-        if: ${{ !cancelled() }}
-        run: $REPORT vulture -- uv run --locked vulture
-      - name: complexity
-        if: ${{ !cancelled() }}
-        run: $REPORT xenon -- uv run --locked xenon src scripts --max-absolute B --max-modules A --max-average A --exclude 'src/sentinel/config.py,src/sentinel/channels/cli.py,src/sentinel/app/speed.py,src/sentinel/app/history.py,src/sentinel/app/report.py'
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          name: quality-fragment-hygiene
-          path: quality-fragments/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  # Mutates only the functions this branch changed. MUTATION_MIN_SCORE is a ratchet raised over
-  # time (repository variable). The full run is weekly, in mutation.yml.
-  mutation:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       MUTATION_MIN_SCORE: ${{ vars.MUTATION_MIN_SCORE || '95' }}
     steps:
@@ -117,24 +71,37 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
+      - name: security
+        run: $REPORT bandit -- uv run --locked bandit -q -c pyproject.toml -r src scripts
+      - name: dependency vulnerabilities
+        if: ${{ !cancelled() }}
+        run: $REPORT pip-audit -- uv run --locked pip-audit --skip-editable
+      - name: dead code
+        if: ${{ !cancelled() }}
+        run: $REPORT vulture -- uv run --locked vulture
+      - name: complexity
+        if: ${{ !cancelled() }}
+        run: $REPORT xenon -- uv run --locked xenon src scripts --max-absolute B --max-modules A --max-average A --exclude 'src/sentinel/config.py,src/sentinel/channels/cli.py,src/sentinel/app/speed.py,src/sentinel/app/history.py,src/sentinel/app/report.py'
       # Exact key, no restore-keys: a stale cache could hide the effect of changed tests.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        if: ${{ !cancelled() }}
         with:
           path: mutants
           key: mutants-${{ runner.os }}-${{ hashFiles('src/**', 'tests/**', 'pyproject.toml', 'uv.lock') }}
       - name: mutation on changed code
-        run: $REPORT mutation -- uv run --locked python scripts/mutation.py changed --base "origin/${{ github.base_ref }}"
+        if: ${{ !cancelled() }}
+        run: $REPORT mutation -- uv run --locked python scripts/mutation.py changed --base "origin/${{ github.base_ref || 'main' }}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         if: ${{ !cancelled() }}
         with:
-          name: quality-fragment-mutation
+          name: quality-fragment-deep
           path: quality-fragments/
           if-no-files-found: ignore
           retention-days: 7
 
   report:
     if: ${{ always() }}
-    needs: [checks, tests, hygiene, mutation]
+    needs: [checks, deep]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -157,7 +124,7 @@ jobs:
           uv run --no-project python scripts/quality_report.py render \
             --needs-json "$NEEDS_JSON" --output quality-report.md
           cat quality-report.md >> "$GITHUB_STEP_SUMMARY"
-      - name: comment on the open PR
+      - name: comment on the PR
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         with:
           script: |
