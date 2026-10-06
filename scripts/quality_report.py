@@ -143,6 +143,9 @@ def render(directory: Path, needs: dict[str, dict[str, str]]) -> str:
     header = "✅ All good" if failing == 0 else f"❌ {failing} failing"
     lines = [MARKER, "", header, "", "| Check | Status | Result |", "| --- | --- | --- |"]
     lines.extend(format_row(row) for row in rows)
+    skipped = sorted(job for job, info in needs.items() if info.get("result") == "skipped")
+    if skipped:
+        lines.extend(["", f"⏭ Skipped while the PR is a draft: {', '.join(skipped)}"])
     return "\n".join(lines) + "\n"
 
 

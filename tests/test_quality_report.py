@@ -165,3 +165,13 @@ class TestRender:
         sut.run("vulture", tmp_path, python_command("pass"))
 
         assert read_fragment(tmp_path, "vulture")["summary"] == "No issues found"
+
+    def test_should_list_jobs_skipped_while_draft_without_failing(
+        self, sut: ModuleType, tmp_path: Path
+    ) -> None:
+        write_fragment(tmp_path, "ruff-check", 0, "All checks passed!")
+
+        lines = self.render(sut, tmp_path, json.dumps({"deep": {"result": "skipped"}}))
+
+        assert "✅ All good" in lines
+        assert "⏭ Skipped while the PR is a draft: deep" in lines

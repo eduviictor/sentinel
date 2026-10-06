@@ -1,10 +1,9 @@
 name: mutation
 
-# Full run over every function: slow, measures how well the tests pin down the rules. Only reports;
-# it never gates a branch. Branches run the cheap version (the mutation job in ci.yml).
+# Full run over every function: slow, measures how well the tests pin down the rules. Manual only
+# (gh workflow run mutation.yml), to save Actions minutes; it never gates a branch. PRs run the
+# cheap version (the mutation step in ci.yml).
 on:
-  schedule:
-    - cron: "0 6 * * 1"
   workflow_dispatch:
     inputs:
       min_score:

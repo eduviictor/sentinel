@@ -16,8 +16,10 @@ make verify    # fast + cobertura, segurança, código morto e complexidade
 ```
 
 Durante o trabalho, rode só os testes afetados (`uv run pytest <caminho>`). A
-verificação completa roda no CI de cada PR e comenta a tabela nele; a mutação
-roda só nas funções alteradas, com catraca em `MUTATION_MIN_SCORE`.
+verificação roda no CI de cada PR e comenta a tabela nele: em draft só lint, tipos,
+arquitetura e testes; o resto (segurança, complexidade, mutação) quando o PR sai
+de draft. A mutação roda só nas funções alteradas, com catraca em
+`MUTATION_MIN_SCORE`; a completa é manual (`gh workflow run mutation.yml`).
 
 ## Antes de commitar
 
